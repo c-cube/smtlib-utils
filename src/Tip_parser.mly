@@ -31,6 +31,7 @@
 %token MATCH
 %token CASE
 %token FUN
+%token LET
 %token AS
 
 %token DATA
@@ -103,6 +104,21 @@ funs_rec_decl:
       A.mk_fun_decl ~ty_vars:l f args ret
     }
 
+assert_not_forall:
+  | LEFT_PAREN FORALL LEFT_PAREN vars=typed_var+ RIGHT_PAREN
+    f=term
+    RIGHT_PAREN
+    { vars, f }
+  | f=term { [], f}
+
+assert_not:
+  | LEFT_PAREN
+      PAR LEFT_PAREN tyvars=tyvar+ RIGHT_PAREN tup=assert_not_forall
+    RIGHT_PAREN
+  { let vars, t = tup in  tyvars, vars, t }
+  | tup=assert_not_forall
+  { let vars, t = tup in  [], vars, t }
+
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
     {
@@ -141,21 +157,12 @@ stmt:
     }
   | LEFT_PAREN
     ASSERT_NOT
-    f=term
+    tup=assert_not
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.assert_not ~loc [] f
-    }
-  | LEFT_PAREN
-    ASSERT_NOT
-      LEFT_PAREN FORALL LEFT_PAREN vars=typed_var+ RIGHT_PAREN
-      f=term
-      RIGHT_PAREN
-    RIGHT_PAREN
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      A.assert_not ~loc vars f
+      let ty_vars, vars, f = tup in
+      A.assert_not ~loc ~ty_vars vars f
     }
   | LEFT_PAREN CHECK_SAT RIGHT_PAREN
     {
@@ -198,6 +205,9 @@ case:
     RIGHT_PAREN
     { c, vars, rhs }
 
+binding:
+  | LEFT_PAREN v=var t=term RIGHT_PAREN { v, t }
+
 term:
   | TRUE { A.true_ }
   | FALSE { A.false_ }
@@ -222,6 +232,12 @@ term:
       body=term
     RIGHT_PAREN
     { A.fun_l vars body }
+  | LEFT_PAREN
+      LET
+      LEFT_PAREN l=binding+ RIGHT_PAREN
+      r=term
+    RIGHT_PAREN
+    { A.let_ l r }
   | LEFT_PAREN AS t=term ty=ty RIGHT_PAREN
     { A.cast t ~ty }
   | error

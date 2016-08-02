@@ -33,6 +33,7 @@ type term =
   | App of term * term list
   | Match of term * (string * var list * term) list
   | If of term * term * term
+  | Let of (var * term) list * term
   | Fun of typed_var * term
   | Eq of term * term
   | Imply of term * term
@@ -74,7 +75,7 @@ and stmt =
   | Stmt_funs_rec of funs_rec
   | Stmt_data of ty_var list * (string * cstor list) list
   | Stmt_assert of term
-  | Stmt_assert_not of typed_var list * term (* assert-not (forall vars t) *)
+  | Stmt_assert_not of ty_var list * typed_var list * term (* assert-not (forall vars t) *)
   | Stmt_check_sat
 
 let ty_bool = Ty_bool
@@ -94,6 +95,7 @@ let match_ u l = Match (u,l)
 let if_ a b c = If(a,b,c)
 let fun_ v t = Fun (v,t)
 let fun_l = List.fold_right fun_
+let let_ l t = Let (l,t)
 let eq a b = Eq (a,b)
 let imply a b = Imply(a,b)
 let and_ l = And l
@@ -115,7 +117,7 @@ let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
 let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
 let data ?loc tyvars l = _mk ?loc (Stmt_data (tyvars,l))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
-let assert_not ?loc vars t = _mk ?loc (Stmt_assert_not (vars, t))
+let assert_not ?loc ~ty_vars vars t = _mk ?loc (Stmt_assert_not (ty_vars, vars, t))
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
 
 let loc t = t.loc
@@ -162,6 +164,9 @@ let rec pp_term out (t:term) = match t with
       (pp_list pp_case) cases
   | If (a,b,c) -> fpf out "(@[<hv1>if %a@ %a@ %a@])" pp_term a pp_term b pp_term c
   | Fun (v,body) -> fpf out "(@[<1>lambda @ (%a)@ %a@])" pp_typed_var v pp_term body
+  | Let (l,t) ->
+    let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v pp_term t in
+    fpf out "(@[<2>let@ (@[%a@])@ %a@])" (pp_list pp_binding) l pp_term t
   | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" pp_term a pp_term b
   | Imply (a,b) -> fpf out "(@[=>@ %a@ %a@])" pp_term a pp_term b
   | And l -> fpf out "(@[<hv>and@ %a@])" (pp_list pp_term) l
@@ -182,14 +187,15 @@ let pp_fun_decl out fd =
 
 let pp_stmt out (st:statement) = match view st with
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
-  | Stmt_assert_not (vars,t) ->
-    begin match vars with
+  | Stmt_assert_not (ty_vars,vars,t) ->
+    let pp_forall out (vars,t) = match vars with
       | [] -> 
         fpf out "(@[assert-not@ %a@])" pp_term t
       | _ ->
         fpf out "(@[assert-not@ (@[forall@ (@[%a@])@ %a@])@])"
           (pp_list pp_typed_var) vars pp_term t
-    end
+    in
+    pp_par pp_forall out (ty_vars,(vars,t))
   | Stmt_decl (s, ty) ->
     fpf out "(@[decl@ %s@ %a@])" s pp_ty ty
   | Stmt_fun_rec fr ->
