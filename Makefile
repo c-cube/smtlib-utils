@@ -32,3 +32,5 @@ watch:
 		echo "============ at `date` ==========" ; \
 		make ; \
 	done
+
+.PHONY: doc upload-doc watch clean
