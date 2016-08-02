@@ -189,13 +189,12 @@ let pp_stmt out (st:statement) = match view st with
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_assert_not (ty_vars,vars,t) ->
     let pp_forall out (vars,t) = match vars with
-      | [] -> 
-        fpf out "(@[assert-not@ %a@])" pp_term t
+      | [] -> pp_term out t
       | _ ->
-        fpf out "(@[assert-not@ (@[forall@ (@[%a@])@ %a@])@])"
+        fpf out "(@[forall@ (@[%a@])@ %a@])"
           (pp_list pp_typed_var) vars pp_term t
     in
-    pp_par pp_forall out (ty_vars,(vars,t))
+    fpf out "(@[assert-not@ %a@])" (pp_par pp_forall) (ty_vars,(vars,t))
   | Stmt_decl (s, ty) ->
     fpf out "(@[decl@ %s@ %a@])" s pp_ty ty
   | Stmt_fun_rec fr ->
