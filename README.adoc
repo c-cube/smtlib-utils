@@ -1,0 +1,12 @@
+= Tip_parser
+:source-highlighter: pygments
+
+Parser for https://github.com/tip-org/
+
+== Documentation
+
+- http://c-cube.github.io/tip_parser/dev[dev]
+
+== License
+
+This code is free, under the BSD license.
