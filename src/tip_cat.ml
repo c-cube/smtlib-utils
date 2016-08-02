@@ -5,6 +5,11 @@
 
 module A = Tip_ast
 
+let process_stdin () =
+  let l = Tip_util.parse_chan_exn stdin in
+  Format.printf "; from <stdin>@.";
+  Format.printf "@[<hv>%a@]@." (A.pp_list A.pp_stmt) l
+
 let process_file file =
   let l = Tip_util.parse_file_exn file in
   Format.printf "; file `%s`@." file;
@@ -17,7 +22,9 @@ let () =
   let l = ref [] in
   Arg.parse options (fun s -> l := s :: !l) "usage: tip-cat [file]*";
   try
-    List.iter process_file (List.rev !l)
+    if !l=[]
+    then process_stdin()
+    else List.iter process_file (List.rev !l)
   with e ->
     Printexc.print_backtrace stdout;
     print_endline (Printexc.to_string e);

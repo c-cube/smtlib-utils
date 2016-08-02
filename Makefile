@@ -1,5 +1,5 @@
 
-OPTS=-use-ocamlfind
+OPTS=-use-ocamlfind -menhir 'menhir --dump --explain'
 FLAGS= -w +a-4-44 -safe-string
 TARGETS = tip_parser.cma tip_parser.cmxa tip_parser.cmxs tip_cat.native
 TO_INSTALL = $(addprefix _build/src/, $(TARGETS) *.cmi tip_parser.a *.mli) \

@@ -2,3 +2,4 @@ Tip_ast
 Tip_lexer
 Tip_parser
 Tip_util
+Tip_loc

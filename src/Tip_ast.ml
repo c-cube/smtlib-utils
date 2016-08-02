@@ -12,73 +12,15 @@ let pp_to_string pp x =
   Format.pp_print_flush fmt ();
   Buffer.contents buf
 
-module Loc = struct
-  type t = {
-    file : string;
-    start_line : int;
-    start_column : int;
-    stop_line : int;
-    stop_column : int;
-  }
-
-  let mk file start_line start_column stop_line stop_column =
-    { file; start_line; start_column; stop_line; stop_column; }
-
-  let mk_pair file (a,b)(c,d) = mk file a b c d
-
-  let mk_pos start stop =
-    let open Lexing in
-    mk
-      start.pos_fname
-      start.pos_lnum (start.pos_cnum - start.pos_bol)
-      stop.pos_lnum (stop.pos_cnum - stop.pos_bol)
-
-  let equal = (=)
-
-  let pp out pos =
-    if pos.start_line = pos.stop_line
-    then
-      Format.fprintf out "file '%s': line %d, col %d to %d"
-        pos.file pos.start_line pos.start_column pos.stop_column
-    else
-      Format.fprintf out "file '%s': line %d, col %d to line %d, col %d"
-        pos.file
-        pos.start_line pos.start_column
-        pos.stop_line pos.stop_column
-
-  let pp_opt out = function
-    | None -> Format.fprintf out "<no location>"
-    | Some pos -> pp out pos
-
-  let to_string_opt = pp_to_string pp_opt
-
-  (** {2 Lexbuf} *)
-
-  let set_file buf filename =
-    let open Lexing in
-    buf.lex_curr_p <- {buf.lex_curr_p with pos_fname=filename;};
-    ()
-
-  let get_file buf =
-    let open Lexing in
-    buf.lex_curr_p.pos_fname
-
-  let of_lexbuf lexbuf =
-    let start = Lexing.lexeme_start_p lexbuf in
-    let end_ = Lexing.lexeme_end_p lexbuf in
-    let s_l = start.Lexing.pos_lnum in
-    let s_c = start.Lexing.pos_cnum - start.Lexing.pos_bol in
-    let e_l = end_.Lexing.pos_lnum in
-    let e_c = end_.Lexing.pos_cnum - end_.Lexing.pos_bol in
-    let file = get_file lexbuf in
-    mk file s_l s_c e_l e_c
-end
+module Loc = Tip_loc
 
 type var = string
+type ty_var = string
 
+(** Polymorphic types *)
 type ty =
   | Ty_bool
-  | Ty_const of string
+  | Ty_app of ty_var * ty list
   | Ty_arrow of ty list * ty
 
 type typed_var = var * ty
@@ -92,12 +34,34 @@ type term =
   | Match of term * (string * var list * term) list
   | If of term * term * term
   | Fun of typed_var * term
-  | Mu of typed_var * term
   | Eq of term * term
   | Imply of term * term
   | And of term list
   | Or of term list
   | Not of term
+  | Cast of term * ty (* type cast *)
+
+type cstor = {
+  cstor_name: string;
+  cstor_args: (string * ty) list; (* selector+type *)
+}
+
+type fun_decl = {
+  fun_ty_vars: ty_var list;
+  fun_name: string;
+  fun_args: typed_var list;
+  fun_ret: ty;
+}
+
+type fun_rec = {
+  fr_decl: fun_decl;
+  fr_body: term;
+}
+
+type funs_rec = {
+  fsr_decls: fun_decl list;
+  fsr_bodies: term list;
+}
 
 type statement = {
   stmt: stmt;
@@ -105,15 +69,17 @@ type statement = {
 }
 
 and stmt =
-  | Stmt_include of string
   | Stmt_decl of string * ty
-  | Stmt_def of (string * ty * term) list
-  | Stmt_data of (string * (string * ty list) list) list
+  | Stmt_fun_rec of fun_rec
+  | Stmt_funs_rec of funs_rec
+  | Stmt_data of ty_var list * (string * cstor list) list
   | Stmt_assert of term
-  | Stmt_goal of typed_var list * term (* satisfy this *)
+  | Stmt_assert_not of typed_var list * term (* assert-not (forall vars t) *)
+  | Stmt_check_sat
 
 let ty_bool = Ty_bool
-let ty_const s = Ty_const s
+let ty_app s l = Ty_app (s,l)
+let ty_const s = ty_app s []
 let ty_arrow_l args ret = if args=[] then ret else Ty_arrow (args, ret)
 let ty_arrow a b = ty_arrow_l [a] b
 
@@ -133,15 +99,24 @@ let imply a b = Imply(a,b)
 let and_ l = And l
 let or_ l = Or l
 let not_ t = Not t
+let cast t ~ty = Cast (t, ty)
 
 let _mk ?loc stmt = { loc; stmt }
 
-let include_ ?loc s = _mk ?loc (Stmt_include s)
+let mk_cstor name l : cstor = { cstor_name=name; cstor_args=l }
+let mk_fun_decl ~ty_vars f args ret =
+  { fun_ty_vars=ty_vars; fun_name=f;
+    fun_args=args; fun_ret=ret; }
+let mk_fun_rec ~ty_vars f args ret body =
+  { fr_decl=mk_fun_decl ~ty_vars f args ret; fr_body=body; }
+
 let decl ?loc f ty = _mk ?loc (Stmt_decl (f, ty))
-let def ?loc l = _mk ?loc (Stmt_def l)
-let data ?loc l = _mk ?loc (Stmt_data l)
+let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
+let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
+let data ?loc tyvars l = _mk ?loc (Stmt_data (tyvars,l))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
-let goal ?loc vars t = _mk ?loc (Stmt_goal (vars, t))
+let assert_not ?loc vars t = _mk ?loc (Stmt_assert_not (vars, t))
+let check_sat ?loc () = _mk ?loc Stmt_check_sat
 
 let loc t = t.loc
 let view t = t.stmt
@@ -163,11 +138,14 @@ let pp_list ?(start="") ?(stop="") ?(sep=" ") pp out l =
   Format.pp_print_string out stop
 
 
+let pp_tyvar = pp_str
+
 let rec pp_ty out (ty:ty) = match ty with
   | Ty_bool -> pp_str out "Bool"
-  | Ty_const s -> pp_str out s
+  | Ty_app (s,[]) -> pp_str out s
+  | Ty_app (s,l) -> Format.fprintf out "(@[<hv1>%s@ %a@])" s (pp_list pp_ty) l
   | Ty_arrow (args,ret) ->
-    fpf out "(@[->@ %a@ %a@])" (pp_list pp_ty) args pp_ty ret
+    fpf out "(@[=>@ %a@ %a@])" (pp_list pp_ty) args pp_ty ret
 
 let rec pp_term out (t:term) = match t with
   | True -> pp_str out "true"
@@ -177,43 +155,65 @@ let rec pp_term out (t:term) = match t with
   | Match (lhs,cases) ->
     let pp_case out (c,vars,rhs) =
       if vars=[]
-      then fpf out "(@[%s@ %a@])" c pp_term rhs
-      else fpf out "(@[%s@ %a@ %a@])" c (pp_list pp_str) vars pp_term rhs
+      then fpf out "(@[<2>case %s@ %a@])" c pp_term rhs
+      else fpf out "(@[<2>case@ (@[%s@ %a@])@ %a@])" c (pp_list pp_str) vars pp_term rhs
     in
-    fpf out "(@[<1>match %a@ (@[<hv>%a@])@])" pp_term lhs
+    fpf out "(@[<1>match@ %a@ @[<v>%a@]@])" pp_term lhs
       (pp_list pp_case) cases
   | If (a,b,c) -> fpf out "(@[<hv1>if %a@ %a@ %a@])" pp_term a pp_term b pp_term c
-  | Fun (v,body) -> fpf out "(@[<1>fun@ (%a)@ %a@])" pp_typed_var v pp_term body
-  | Mu (v,body) -> fpf out "(@[<1>fun@ (%a)@ %a@])" pp_typed_var v pp_term body
+  | Fun (v,body) -> fpf out "(@[<1>lambda @ (%a)@ %a@])" pp_typed_var v pp_term body
   | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" pp_term a pp_term b
   | Imply (a,b) -> fpf out "(@[=>@ %a@ %a@])" pp_term a pp_term b
   | And l -> fpf out "(@[<hv>and@ %a@])" (pp_list pp_term) l
   | Or l -> fpf out "(@[<hv>or@ %a@])" (pp_list pp_term) l
   | Not t -> fpf out "(not %a)" pp_term t
+  | Cast (t, ty) -> fpf out "(@[<hv2>as@ @[%a@]@ @[%a@]@])" pp_term t pp_ty ty
 and pp_typed_var out (v,ty) =
   fpf out "(@[%s@ %a@])" v pp_ty ty
 
+let pp_par pp_x out (ty_vars,x) = match ty_vars with
+  | [] -> pp_x out x
+  | _ ->
+    fpf out "(@[<2>par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
+
+let pp_fun_decl out fd =
+  fpf out "%s@ (@[%a@])@ %a"
+    fd.fun_name (pp_list pp_typed_var) fd.fun_args pp_ty fd.fun_ret
+
 let pp_stmt out (st:statement) = match view st with
-  | Stmt_include s -> fpf out "(include %S)" s
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
-  | Stmt_goal (vars,t) ->
-    fpf out "(@[goal@ (@[%a@])@ %a@])" (pp_list pp_typed_var) vars pp_term t
+  | Stmt_assert_not (vars,t) ->
+    begin match vars with
+      | [] -> 
+        fpf out "(@[assert-not@ %a@])" pp_term t
+      | _ ->
+        fpf out "(@[assert-not@ (@[forall@ (@[%a@])@ %a@])@])"
+          (pp_list pp_typed_var) vars pp_term t
+    end
   | Stmt_decl (s, ty) ->
     fpf out "(@[decl@ %s@ %a@])" s pp_ty ty
-  | Stmt_def l ->
-    let pp_def out (s,ty,rhs) =
-      fpf out "(@[<1>%s@ %a@ %a@])" s pp_ty ty pp_term rhs
-    in
-    fpf out "(@[<hv1>define@ %a@])" (pp_list pp_def) l
-  | Stmt_data l ->
-    let pp_cstor out (s,ty_args) =
-      if ty_args=[] then pp_str out s
-      else fpf out "(@[<1>%s@ %a@])" s (pp_list pp_ty) ty_args
+  | Stmt_fun_rec fr ->
+    let pp_fr out fr =
+      fpf out "@[<2>%a@ %a@]" pp_fun_decl fr.fr_decl pp_term fr.fr_body in
+    fpf out "(@[<2>define-fun-rec@ %a@])"
+      (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
+  | Stmt_funs_rec fsr ->
+    let pp_decl' out d = fpf out "(@[<2>%a@])" pp_fun_decl d in
+    fpf out "(@[<hv2>define-funs-rec@ (@[<v>%a@])@ (@[<v>%a@])@])"
+      (pp_list pp_decl') fsr.fsr_decls (pp_list pp_term) fsr.fsr_bodies
+  | Stmt_data (tyvars,l) ->
+    let pp_cstor_arg out (sel,ty) = fpf out "(@[%s %a@])" sel pp_ty ty in
+    let pp_cstor out c =
+      if c.cstor_args = []
+      then fpf out "(%s)" c.cstor_name
+      else fpf out "(@[<1>%s@ %a@])" c.cstor_name (pp_list pp_cstor_arg) c.cstor_args
     in
     let pp_data out (s,cstors) =
-      fpf out "(@[<hv1>%s@ (@[<v>%a@]@])" s (pp_list pp_cstor) cstors
+      fpf out "(@[<2>%s@ @[<v>%a@]@])" s (pp_list pp_cstor) cstors
     in
-    fpf out "(@[<hv>data@ @[<v>%a@]@])" (pp_list pp_data) l
+    fpf out "(@[<hv2>declare-datatypes@ (@[%a@])@ (@[<v>%a@])@])"
+      (pp_list pp_tyvar) tyvars (pp_list pp_data) l
+  | Stmt_check_sat -> pp_str out "(check-sat)"
 
 (** {2 Errors} *)
 

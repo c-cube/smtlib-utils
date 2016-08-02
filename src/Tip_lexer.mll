@@ -5,7 +5,7 @@
 
 {
   module A = Tip_ast
-  module Loc = A.Loc
+  module Loc = Tip_loc
   open Tip_parser (* for tokens *)
 
 }
@@ -29,17 +29,27 @@ rule token = parse
   | "Bool" { BOOL }
   | "true" { TRUE }
   | "false" { FALSE }
-  | "if" { IF }
+  | "or" { OR }
+  | "and" { AND }
+  | "not" { AND }
+  | "ite" { IF }
+  | "as" { AS }
   | "match" { MATCH }
   | "case" { CASE }
-  | "fun" { FUN }
-  | "mu" { MU }
+  | "lambda" { FUN }
+  | "par" { PAR }
+  | "=>" { ARROW }
+  | "=" { EQ }
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
   | "assert-not" { ASSERT_NOT }
   | "decl" { DECL }
-  | "define-fun-rec" { DEFINE }
+  | "define-fun" { DEFINE_FUN_REC }
+  | "define-fun-rec" { DEFINE_FUN_REC }
+  | "define-funs-rec" { DEFINE_FUNS_REC }
   | "forall" { FORALL }
+  | "assert-not" { ASSERT_NOT }
+  | "check-sat" { CHECK_SAT }
   | ident { IDENT(Lexing.lexeme lexbuf) }
   | quoted {
       (* TODO: unescape *)
