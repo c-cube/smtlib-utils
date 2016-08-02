@@ -71,6 +71,11 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.data ~loc l
     }
+  | error
+    { 
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.parse_errorf ~loc "expected statement"
+    }
 
 ty:
   | BOOL { A.ty_bool }
@@ -84,6 +89,11 @@ term:
   | s=QUOTED { A.const s }
   | s=IDENT { A.const s }
   | LEFT_PAREN f=term args=term+ RIGHT_PAREN { A.app f args }
+  | error
+    { 
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.parse_errorf ~loc "expected term"
+    }
 
 
 
