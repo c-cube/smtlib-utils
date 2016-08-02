@@ -5,7 +5,7 @@ Parser for https://github.com/tip-org/
 
 == Documentation
 
-- http://c-cube.github.io/tip_parser/dev[dev]
+- http://c-cube.github.io/tip-parser/dev[dev]
 
 == License
 
