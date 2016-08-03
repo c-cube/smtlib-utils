@@ -31,7 +31,7 @@ rule token = parse
   | "false" { FALSE }
   | "or" { OR }
   | "and" { AND }
-  | "not" { AND }
+  | "not" { NOT }
   | "ite" { IF }
   | "as" { AS }
   | "match" { MATCH }
@@ -50,7 +50,6 @@ rule token = parse
   | "define-fun-rec" { DEFINE_FUN_REC }
   | "define-funs-rec" { DEFINE_FUNS_REC }
   | "forall" { FORALL }
-  | "assert-not" { ASSERT_NOT }
   | "check-sat" { CHECK_SAT }
   | ident { IDENT(Lexing.lexeme lexbuf) }
   | quoted {
