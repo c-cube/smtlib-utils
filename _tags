@@ -1,4 +1,4 @@
 <src>: include
-<src/**/*>: warn(+a-4-44), safe_string, package(bytes), package(result)
+<src/**/*>: warn(+a-4-44@8), safe_string, package(bytes), package(result)
 
 true: debug, bin_annot, use_menhir
