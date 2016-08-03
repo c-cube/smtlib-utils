@@ -36,6 +36,7 @@ rule token = parse
   | "as" { AS }
   | "match" { MATCH }
   | "case" { CASE }
+  | "default" { DEFAULT }
   | "lambda" { FUN }
   | "let" { LET }
   | "par" { PAR }

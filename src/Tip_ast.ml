@@ -31,7 +31,7 @@ type term =
   | False
   | Const of string
   | App of term * term list
-  | Match of term * (string * var list * term) list
+  | Match of term * match_branch list
   | If of term * term * term
   | Let of (var * term) list * term
   | Fun of typed_var * term
@@ -41,6 +41,10 @@ type term =
   | Or of term list
   | Not of term
   | Cast of term * ty (* type cast *)
+
+and match_branch =
+  | Match_default of term
+  | Match_case of string * var list * term
 
 type cstor = {
   cstor_name: string;
@@ -157,10 +161,12 @@ let rec pp_term out (t:term) = match t with
   | Const s -> pp_str out s
   | App (f,l) -> fpf out "(@[<1>%a@ %a@])" pp_term f (pp_list pp_term) l
   | Match (lhs,cases) ->
-    let pp_case out (c,vars,rhs) =
-      if vars=[]
-      then fpf out "(@[<2>case %s@ %a@])" c pp_term rhs
-      else fpf out "(@[<2>case@ (@[%s@ %a@])@ %a@])" c (pp_list pp_str) vars pp_term rhs
+    let pp_case out = function
+      | Match_default rhs -> fpf out "(@[<2>case default@ %a@])" pp_term rhs
+      | Match_case (c,[],rhs) ->
+        fpf out "(@[<2>case %s@ %a@])" c pp_term rhs
+      | Match_case (c,vars,rhs) ->
+        fpf out "(@[<2>case@ (@[%s@ %a@])@ %a@])" c (pp_list pp_str) vars pp_term rhs
     in
     fpf out "(@[<1>match@ %a@ @[<v>%a@]@])" pp_term lhs
       (pp_list pp_case) cases

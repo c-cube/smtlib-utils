@@ -30,6 +30,7 @@
 %token IF
 %token MATCH
 %token CASE
+%token DEFAULT
 %token FUN
 %token LET
 %token AS
@@ -207,13 +208,17 @@ case:
       c=IDENT
       rhs=term
     RIGHT_PAREN
-    { c, [], rhs }
+    { A.Match_case (c, [], rhs) }
   | LEFT_PAREN
       CASE
       LEFT_PAREN c=IDENT vars=var+ RIGHT_PAREN
       rhs=term
     RIGHT_PAREN
-    { c, vars, rhs }
+    { A.Match_case (c, vars, rhs) }
+  | LEFT_PAREN
+     CASE DEFAULT rhs=term
+    RIGHT_PAREN
+    { A.Match_default rhs }
 
 binding:
   | LEFT_PAREN v=var t=term RIGHT_PAREN { v, t }
