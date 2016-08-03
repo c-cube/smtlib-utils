@@ -39,6 +39,7 @@
 %token ASSERT_NOT
 %token FORALL
 %token DECL
+%token DECLARE_SORT
 %token DEFINE_FUN_REC
 %token DEFINE_FUNS_REC
 %token CHECK_SAT
@@ -124,6 +125,15 @@ stmt:
     {
       let loc = Loc.mk_pos $startpos $endpos in
       A.assert_ ~loc t
+    }
+  | LEFT_PAREN DECLARE_SORT s=IDENT n=IDENT RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      try
+        let n = int_of_string n in
+        A.decl_sort ~loc s ~arity:n
+      with Failure _ ->
+        A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
     }
   | LEFT_PAREN DECL s=IDENT ty=ty RIGHT_PAREN
     {

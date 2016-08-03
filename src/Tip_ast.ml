@@ -70,6 +70,7 @@ type statement = {
 }
 
 and stmt =
+  | Stmt_decl_sort of string * int (* arity *)
   | Stmt_decl of string * ty
   | Stmt_fun_rec of fun_rec
   | Stmt_funs_rec of funs_rec
@@ -112,6 +113,7 @@ let mk_fun_decl ~ty_vars f args ret =
 let mk_fun_rec ~ty_vars f args ret body =
   { fr_decl=mk_fun_decl ~ty_vars f args ret; fr_body=body; }
 
+let decl_sort ?loc s ~arity = _mk ?loc (Stmt_decl_sort (s, arity))
 let decl ?loc f ty = _mk ?loc (Stmt_decl (f, ty))
 let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
 let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
@@ -186,6 +188,7 @@ let pp_fun_decl out fd =
     fd.fun_name (pp_list pp_typed_var) fd.fun_args pp_ty fd.fun_ret
 
 let pp_stmt out (st:statement) = match view st with
+  | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_assert_not (ty_vars,vars,t) ->
     let pp_forall out (vars,t) = match vars with
