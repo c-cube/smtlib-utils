@@ -42,6 +42,7 @@ rule token = parse
   | "par" { PAR }
   | "=>" { ARROW }
   | "=" { EQ }
+  | "@" { AT }
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
   | "assert-not" { ASSERT_NOT }

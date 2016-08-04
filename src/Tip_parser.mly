@@ -34,6 +34,7 @@
 %token FUN
 %token LET
 %token AS
+%token AT
 
 %token DATA
 %token ASSERT
@@ -235,6 +236,7 @@ term:
   | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
   | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
   | LEFT_PAREN f=term args=term+ RIGHT_PAREN { A.app f args }
+  | LEFT_PAREN AT f=term t=term RIGHT_PAREN { A.app f [t] }
   | LEFT_PAREN
       MATCH
       lhs=term
