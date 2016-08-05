@@ -235,8 +235,8 @@ term:
   | LEFT_PAREN NOT t=term RIGHT_PAREN { A.not_ t }
   | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
   | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
-  | LEFT_PAREN f=term args=term+ RIGHT_PAREN { A.app f args }
-  | LEFT_PAREN AT f=term t=term RIGHT_PAREN { A.app f [t] }
+  | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN { A.app f args }
+  | LEFT_PAREN AT f=term t=term RIGHT_PAREN { A.ho_app f t }
   | LEFT_PAREN
       MATCH
       lhs=term

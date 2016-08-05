@@ -30,7 +30,8 @@ type term =
   | True
   | False
   | Const of string
-  | App of term * term list
+  | App of string * term list
+  | HO_app of term * term (* higher-order application *)
   | Match of term * match_branch list
   | If of term * term * term
   | Let of (var * term) list * term
@@ -92,10 +93,8 @@ let ty_arrow a b = ty_arrow_l [a] b
 let true_ = True
 let false_ = False
 let const s = Const s
-let app f l = match f, l with
-  | _, [] -> f
-  | App (f1, l1), _ -> App (f1, l1 @ l)
-  | _ -> App (f, l)
+let app f l = App (f,l)
+let ho_app a b = HO_app (a,b)
 let match_ u l = Match (u,l)
 let if_ a b c = If(a,b,c)
 let fun_ v t = Fun (v,t)
@@ -159,7 +158,8 @@ let rec pp_term out (t:term) = match t with
   | True -> pp_str out "true"
   | False -> pp_str out "false"
   | Const s -> pp_str out s
-  | App (f,l) -> fpf out "(@[<1>%a@ %a@])" pp_term f (pp_list pp_term) l
+  | App (f,l) -> fpf out "(@[<1>%s@ %a@])" f (pp_list pp_term) l
+  | HO_app (a,b) -> fpf out "(@[<1>@@@ %a@ %a@])" pp_term a pp_term b
   | Match (lhs,cases) ->
     let pp_case out = function
       | Match_default rhs -> fpf out "(@[<2>case default@ %a@])" pp_term rhs
