@@ -197,8 +197,14 @@ ty:
   | s=IDENT { A.ty_const s }
   | LEFT_PAREN s=IDENT args=ty+ RIGHT_PAREN
     { A.ty_app s args }
-  | LEFT_PAREN ARROW arg=ty ret=ty RIGHT_PAREN
-    { A.ty_arrow arg ret }
+  | LEFT_PAREN ARROW tup=ty_arrow_args RIGHT_PAREN
+    {
+      let args, ret = tup in
+      A.ty_arrow_l args ret }
+
+ty_arrow_args:
+  | a=ty ret=ty { [a], ret }
+  | a=ty tup=ty_arrow_args { a :: fst tup, snd tup }
 
 typed_var:
   | LEFT_PAREN s=IDENT ty=ty RIGHT_PAREN { s, ty }
