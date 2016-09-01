@@ -1,7 +1,7 @@
 = Tip_parser
 :source-highlighter: pygments
 
-Parser for https://github.com/tip-org/
+Parser for https://tip-org.github.io/format.html, in OCaml. It depends on menhir.
 
 == Documentation
 
