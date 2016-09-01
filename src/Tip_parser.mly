@@ -42,6 +42,7 @@
 %token FORALL
 %token DECL
 %token DECLARE_SORT
+%token DECLARE_FUN
 %token DEFINE_FUN_REC
 %token DEFINE_FUNS_REC
 %token CHECK_SAT
@@ -149,6 +150,16 @@ stmt:
     {
       let loc = Loc.mk_pos $startpos $endpos in
       A.data ~loc vars l
+    }
+  | LEFT_PAREN
+    DECLARE_FUN
+    f=IDENT
+    LEFT_PAREN args=ty* RIGHT_PAREN
+    ret=ty
+    RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.decl ~loc f (A.ty_arrow_l args ret)
     }
   | LEFT_PAREN
     DEFINE_FUN_REC
