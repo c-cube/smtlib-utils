@@ -48,6 +48,7 @@ rule token = parse
   | "assert-not" { ASSERT_NOT }
   | "declare-sort" { DECLARE_SORT }
   | "declare-fun" { DECLARE_FUN }
+  | "declare-const" { DECLARE_CONST }
   | "define-fun" { DEFINE_FUN }
   | "define-fun-rec" { DEFINE_FUN_REC }
   | "define-funs-rec" { DEFINE_FUNS_REC }

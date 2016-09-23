@@ -43,6 +43,7 @@
 %token FORALL
 %token EXISTS
 %token DECLARE_SORT
+%token DECLARE_CONST
 %token DECLARE_FUN
 %token DEFINE_FUN
 %token DEFINE_FUN_REC
@@ -161,6 +162,11 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       let tyvars, f, args, ret = tup in
       A.decl_fun ~loc ~tyvars f args ret
+    }
+  | LEFT_PAREN DECLARE_CONST f=IDENT ty=ty RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.decl_fun ~loc ~tyvars:[] f [] ty
     }
   | LEFT_PAREN DEFINE_FUN f=fun_rec RIGHT_PAREN
     {
