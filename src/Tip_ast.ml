@@ -54,20 +54,20 @@ type cstor = {
   cstor_args: (string * ty) list; (* selector+type *)
 }
 
-type fun_decl = {
+type 'arg fun_decl = {
   fun_ty_vars: ty_var list;
   fun_name: string;
-  fun_args: typed_var list;
+  fun_args: 'arg list;
   fun_ret: ty;
 }
 
 type fun_def = {
-  fr_decl: fun_decl;
+  fr_decl: typed_var fun_decl;
   fr_body: term;
 }
 
 type funs_rec_def = {
-  fsr_decls: fun_decl list;
+  fsr_decls: typed_var fun_decl list;
   fsr_bodies: term list;
 }
 
@@ -78,7 +78,7 @@ type statement = {
 
 and stmt =
   | Stmt_decl_sort of string * int (* arity *)
-  | Stmt_decl of ty_var list * string * ty list * ty (* tyvars, id, ty args, ty ret *)
+  | Stmt_decl of ty fun_decl
   | Stmt_fun_def of fun_def
   | Stmt_fun_rec of fun_def
   | Stmt_funs_rec of funs_rec_def
@@ -123,7 +123,8 @@ let mk_fun_rec ~ty_vars f args ret body =
 
 let decl_sort ?loc s ~arity = _mk ?loc (Stmt_decl_sort (s, arity))
 let decl_fun ?loc ~tyvars f ty_args ty_ret =
-  _mk ?loc (Stmt_decl (tyvars, f, ty_args, ty_ret))
+  let d = {fun_ty_vars=tyvars; fun_name=f; fun_args=ty_args; fun_ret=ty_ret} in
+  _mk ?loc (Stmt_decl d)
 let fun_def ?loc fr = _mk ?loc (Stmt_fun_def fr)
 let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
 let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
@@ -200,24 +201,21 @@ let pp_par pp_x out (ty_vars,x) = match ty_vars with
   | _ ->
     fpf out "(@[<2>par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
 
-let pp_fun_decl out fd =
+let pp_fun_decl pp_arg out fd =
   fpf out "%s@ (@[%a@])@ %a"
-    fd.fun_name (pp_list pp_typed_var) fd.fun_args pp_ty fd.fun_ret
+    fd.fun_name (pp_list pp_arg) fd.fun_args pp_ty fd.fun_ret
 
 let pp_fr out fr =
-  fpf out "@[<2>%a@ %a@]" pp_fun_decl fr.fr_decl pp_term fr.fr_body
+  fpf out "@[<2>%a@ %a@]" (pp_fun_decl pp_typed_var) fr.fr_decl pp_term fr.fr_body
 
 let pp_stmt out (st:statement) = match view st with
   | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_assert_not (ty_vars,t) ->
     fpf out "(@[assert-not@ %a@])" (pp_par pp_term) (ty_vars,t)
-  | Stmt_decl (tyvars, s, ty_args, ty_ret) ->
-    let pp_mono out (s,ty_args,ty_ret) =
-      fpf out "@[%s@ (@[%a@])@ %a@]" s (pp_list pp_ty) ty_args pp_ty ty_ret
-    in
+  | Stmt_decl d ->
     fpf out "(@[declare-fun@ %a@])"
-      (pp_par pp_mono) (tyvars, (s,ty_args,ty_ret))
+      (pp_par (pp_fun_decl pp_ty)) (d.fun_ty_vars,d)
   | Stmt_fun_def fr ->
     fpf out "(@[<2>define-fun@ %a@])"
       (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
@@ -225,7 +223,7 @@ let pp_stmt out (st:statement) = match view st with
     fpf out "(@[<2>define-fun-rec@ %a@])"
       (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
   | Stmt_funs_rec fsr ->
-    let pp_decl' out d = fpf out "(@[<2>%a@])" pp_fun_decl d in
+    let pp_decl' out d = fpf out "(@[<2>%a@])" (pp_fun_decl pp_typed_var) d in
     fpf out "(@[<hv2>define-funs-rec@ (@[<v>%a@])@ (@[<v>%a@])@])"
       (pp_list pp_decl') fsr.fsr_decls (pp_list pp_term) fsr.fsr_bodies
   | Stmt_data (tyvars,l) ->
