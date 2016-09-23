@@ -258,6 +258,7 @@ term:
   | FALSE { A.false_ }
   | s=QUOTED { A.const s }
   | s=IDENT { A.const s }
+  | LEFT_PAREN t=term RIGHT_PAREN { t }
   | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { A.if_ a b c }
   | LEFT_PAREN OR l=term+ RIGHT_PAREN { A.or_ l }
   | LEFT_PAREN AND l=term+ RIGHT_PAREN { A.and_ l }
