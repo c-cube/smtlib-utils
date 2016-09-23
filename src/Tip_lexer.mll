@@ -53,6 +53,7 @@ rule token = parse
   | "define-fun-rec" { DEFINE_FUN_REC }
   | "define-funs-rec" { DEFINE_FUNS_REC }
   | "forall" { FORALL }
+  | "exists" { EXISTS }
   | "check-sat" { CHECK_SAT }
   | ident { IDENT(Lexing.lexeme lexbuf) }
   | quoted {

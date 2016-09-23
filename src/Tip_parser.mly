@@ -40,6 +40,7 @@
 %token ASSERT
 %token ASSERT_NOT
 %token FORALL
+%token EXISTS
 %token DECL
 %token DECLARE_SORT
 %token DECLARE_FUN
@@ -117,11 +118,11 @@ assert_not_forall:
 
 assert_not:
   | LEFT_PAREN
-      PAR LEFT_PAREN tyvars=tyvar+ RIGHT_PAREN tup=assert_not_forall
+      PAR LEFT_PAREN tyvars=tyvar+ RIGHT_PAREN t=term
     RIGHT_PAREN
-  { let vars, t = tup in  tyvars, vars, t }
-  | tup=assert_not_forall
-  { let vars, t = tup in  [], vars, t }
+  { tyvars, t }
+  | t=term
+  { [], t }
 
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
@@ -184,8 +185,8 @@ stmt:
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      let ty_vars, vars, f = tup in
-      A.assert_not ~loc ~ty_vars vars f
+      let ty_vars, f = tup in
+      A.assert_not ~loc ~ty_vars f
     }
   | LEFT_PAREN CHECK_SAT RIGHT_PAREN
     {
@@ -274,6 +275,14 @@ term:
     { A.let_ l r }
   | LEFT_PAREN AS t=term ty=ty RIGHT_PAREN
     { A.cast t ~ty }
+  | LEFT_PAREN FORALL LEFT_PAREN vars=typed_var+ RIGHT_PAREN
+    f=term
+    RIGHT_PAREN
+    { A.forall vars f }
+  | LEFT_PAREN EXISTS LEFT_PAREN vars=typed_var+ RIGHT_PAREN
+    f=term
+    RIGHT_PAREN
+    { A.exists vars f }
   | error
     {
       let loc = Loc.mk_pos $startpos $endpos in
