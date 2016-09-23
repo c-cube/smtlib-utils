@@ -39,4 +39,11 @@ test: all
 	find benchmarks/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
 	#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
 
+test-idempotent: all
+	@echo test that '`printer | parser`' works
+	@for i in benchmarks/**/*.smt2 ; \
+	  do echo "$$i"; \
+	  (./tip_cat.native "$$i" | ./tip_cat.native -q) || exit 1; \
+	  done
+
 .PHONY: doc upload-doc watch clean test
