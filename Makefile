@@ -34,4 +34,9 @@ watch:
 		make ; \
 	done
 
-.PHONY: doc upload-doc watch clean
+test: all
+	@[ -d benchmarks ] || (echo "expect benchmarks/ to exist" && exit 1)
+	find benchmarks/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
+	#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
+
+.PHONY: doc upload-doc watch clean test
