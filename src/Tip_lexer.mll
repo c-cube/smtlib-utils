@@ -1,7 +1,7 @@
 
 (* This file is free software. See file "license" for more details. *)
 
-(** {1 Lexer for SMBC} *)
+(** {1 Lexer for TIP} *)
 
 {
   module A = Tip_ast
@@ -46,10 +46,9 @@ rule token = parse
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
   | "assert-not" { ASSERT_NOT }
-  | "decl" { DECL }
   | "declare-sort" { DECLARE_SORT }
   | "declare-fun" { DECLARE_FUN }
-  | "define-fun" { DEFINE_FUN_REC }
+  | "define-fun" { DEFINE_FUN }
   | "define-fun-rec" { DEFINE_FUN_REC }
   | "define-funs-rec" { DEFINE_FUNS_REC }
   | "forall" { FORALL }

@@ -1,10 +1,11 @@
 
 
-(* This file is free software, part of nunchaku. See file "license" for more details. *)
+(* This file is free software, part of tip-parser. See file "license" for more details. *)
 
-(** {1 Parser for Nunchaku} *)
+(** {1 Parser for TIP} *)
 
-(* vim:SyntasticToggleMode: *)
+(* vim:SyntasticToggleMode:
+   vim:set ft=yacc: *)
 
 %{
   module A = Tip_ast
@@ -41,9 +42,9 @@
 %token ASSERT_NOT
 %token FORALL
 %token EXISTS
-%token DECL
 %token DECLARE_SORT
 %token DECLARE_FUN
+%token DEFINE_FUN
 %token DEFINE_FUN_REC
 %token DEFINE_FUNS_REC
 %token CHECK_SAT
@@ -71,14 +72,29 @@ cstor:
 data:
   | LEFT_PAREN s=IDENT l=cstor+ RIGHT_PAREN { s,l }
 
-fun_decl_mono:
+fun_def_mono:
   | f=IDENT
     LEFT_PAREN args=typed_var* RIGHT_PAREN
     ret=ty
     { f, args, ret }
 
+fun_decl_mono:
+  | f=IDENT
+    LEFT_PAREN args=ty* RIGHT_PAREN
+    ret=ty
+    { f, args, ret }
+
+fun_decl:
+  | tup=fun_decl_mono { let f, args, ret = tup in [], f, args, ret }
+  | LEFT_PAREN
+      PAR
+      LEFT_PAREN tyvars=tyvar* RIGHT_PAREN
+      LEFT_PAREN tup=fun_decl_mono RIGHT_PAREN
+    RIGHT_PAREN
+    { let f, args, ret = tup in tyvars, f, args, ret }
+
 fun_rec:
-  | tup=fun_decl_mono body=term
+  | tup=fun_def_mono body=term
     {
       let f, args, ret = tup in
       A.mk_fun_rec ~ty_vars:[] f args ret body
@@ -86,7 +102,7 @@ fun_rec:
   | LEFT_PAREN
       PAR
       LEFT_PAREN l=tyvar* RIGHT_PAREN
-      LEFT_PAREN tup=fun_decl_mono body=term RIGHT_PAREN
+      LEFT_PAREN tup=fun_def_mono body=term RIGHT_PAREN
     RIGHT_PAREN
     {
       let f, args, ret = tup in
@@ -94,7 +110,7 @@ fun_rec:
     }
 
 funs_rec_decl:
-  | LEFT_PAREN tup=fun_decl_mono RIGHT_PAREN
+  | LEFT_PAREN tup=fun_def_mono RIGHT_PAREN
     {
       let f, args, ret = tup in
       A.mk_fun_decl ~ty_vars:[] f args ret
@@ -102,19 +118,12 @@ funs_rec_decl:
   | LEFT_PAREN
       PAR
       LEFT_PAREN l=tyvar* RIGHT_PAREN
-      LEFT_PAREN tup=fun_decl_mono RIGHT_PAREN
+      LEFT_PAREN tup=fun_def_mono RIGHT_PAREN
     RIGHT_PAREN
     {
       let f, args, ret = tup in
       A.mk_fun_decl ~ty_vars:l f args ret
     }
-
-assert_not_forall:
-  | LEFT_PAREN FORALL LEFT_PAREN vars=typed_var+ RIGHT_PAREN
-    f=term
-    RIGHT_PAREN
-    { vars, f }
-  | f=term { [], f}
 
 assert_not:
   | LEFT_PAREN
@@ -139,11 +148,6 @@ stmt:
       with Failure _ ->
         A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
     }
-  | LEFT_PAREN DECL s=IDENT ty=ty RIGHT_PAREN
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      A.decl ~loc s ty
-    }
   | LEFT_PAREN DATA
       LEFT_PAREN vars=tyvar* RIGHT_PAREN
       LEFT_PAREN l=data+ RIGHT_PAREN
@@ -152,15 +156,16 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.data ~loc vars l
     }
-  | LEFT_PAREN
-    DECLARE_FUN
-    f=IDENT
-    LEFT_PAREN args=ty* RIGHT_PAREN
-    ret=ty
-    RIGHT_PAREN
+  | LEFT_PAREN DECLARE_FUN tup=fun_decl RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.decl ~loc f (A.ty_arrow_l args ret)
+      let tyvars, f, args, ret = tup in
+      A.decl_fun ~loc ~tyvars f args ret
+    }
+  | LEFT_PAREN DEFINE_FUN f=fun_rec RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.fun_rec ~loc f
     }
   | LEFT_PAREN
     DEFINE_FUN_REC
