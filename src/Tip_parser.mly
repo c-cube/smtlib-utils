@@ -53,14 +53,17 @@
 %token <string>IDENT
 %token <string>QUOTED
 
+%start <Tip_ast.term> parse_term
+%start <Tip_ast.ty> parse_ty
 %start <Tip_ast.statement> parse
 %start <Tip_ast.statement list> parse_list
 
 %%
 
 parse_list: l=stmt* EOI {l}
-
 parse: t=stmt EOI { t }
+parse_term: t=term EOI { t }
+parse_ty: t=ty EOI { t }
 
 cstor_arg:
   | LEFT_PAREN name=IDENT ty=ty RIGHT_PAREN { name, ty }
