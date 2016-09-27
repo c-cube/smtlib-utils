@@ -178,7 +178,7 @@ let rec pp_term out (t:term) = match t with
     in
     fpf out "(@[<1>match@ %a@ @[<v>%a@]@])" pp_term lhs
       (pp_list pp_case) cases
-  | If (a,b,c) -> fpf out "(@[<hv1>if %a@ %a@ %a@])" pp_term a pp_term b pp_term c
+  | If (a,b,c) -> fpf out "(@[<hv1>ite %a@ %a@ %a@])" pp_term a pp_term b pp_term c
   | Fun (v,body) -> fpf out "(@[<1>lambda @ (%a)@ %a@])" pp_typed_var v pp_term body
   | Let (l,t) ->
     let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v pp_term t in
