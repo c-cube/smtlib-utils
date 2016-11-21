@@ -39,6 +39,7 @@
 
 %token DATA
 %token ASSERT
+%token LEMMA
 %token ASSERT_NOT
 %token FORALL
 %token EXISTS
@@ -142,6 +143,11 @@ stmt:
     {
       let loc = Loc.mk_pos $startpos $endpos in
       A.assert_ ~loc t
+    }
+  | LEFT_PAREN LEMMA t=term RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.lemma ~loc t
     }
   | LEFT_PAREN DECLARE_SORT s=IDENT n=IDENT RIGHT_PAREN
     {

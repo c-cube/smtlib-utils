@@ -84,6 +84,7 @@ and stmt =
   | Stmt_funs_rec of funs_rec_def
   | Stmt_data of ty_var list * (string * cstor list) list
   | Stmt_assert of term
+  | Stmt_lemma of term
   | Stmt_assert_not of ty_var list * term
   | Stmt_check_sat
 
@@ -130,6 +131,7 @@ let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
 let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
 let data ?loc tyvars l = _mk ?loc (Stmt_data (tyvars,l))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
+let lemma ?loc t = _mk ?loc (Stmt_lemma t)
 let assert_not ?loc ~ty_vars t = _mk ?loc (Stmt_assert_not (ty_vars, t))
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
 
@@ -211,6 +213,7 @@ let pp_fr out fr =
 let pp_stmt out (st:statement) = match view st with
   | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
+  | Stmt_lemma t -> fpf out "(@[lemma@ %a@])" pp_term t
   | Stmt_assert_not (ty_vars,t) ->
     fpf out "(@[assert-not@ %a@])" (pp_par pp_term) (ty_vars,t)
   | Stmt_decl d ->

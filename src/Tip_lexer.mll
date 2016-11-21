@@ -45,6 +45,7 @@ rule token = parse
   | "@" { AT }
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
+  | "lemma" { LEMMA }
   | "assert-not" { ASSERT_NOT }
   | "declare-sort" { DECLARE_SORT }
   | "declare-fun" { DECLARE_FUN }
