@@ -109,11 +109,14 @@ let eq a b = Eq (a,b)
 let imply a b = Imply(a,b)
 let and_ l = And l
 let or_ l = Or l
-let not_ t = Not t
 let distinct l = Distinct l
 let cast t ~ty = Cast (t, ty)
 let forall vars f = match vars with [] -> f | _ -> Forall (vars, f)
 let exists vars f = match vars with [] -> f | _ -> Exists (vars, f)
+let rec not_ t = match t with
+  | Forall (vars,u) -> exists vars (not_ u)
+  | Exists (vars,u) -> forall vars (not_ u)
+  | _ -> Not t
 
 let _mk ?loc stmt = { loc; stmt }
 
