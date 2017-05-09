@@ -100,6 +100,7 @@ let false_ = False
 let const s = Const s
 let app f l = App (f,l)
 let ho_app a b = HO_app (a,b)
+let ho_app_l a l = List.fold_left ho_app a l
 let match_ u l = Match (u,l)
 let if_ a b c = If(a,b,c)
 let fun_ v t = Fun (v,t)

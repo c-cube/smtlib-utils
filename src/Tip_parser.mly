@@ -268,6 +268,14 @@ term:
   | FALSE { A.false_ }
   | s=QUOTED { A.const s }
   | s=IDENT { A.const s }
+  | t=composite_term { t }
+  | error
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.parse_errorf ~loc "expected term"
+    }
+
+composite_term:
   | LEFT_PAREN t=term RIGHT_PAREN { t }
   | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { A.if_ a b c }
   | LEFT_PAREN OR l=term+ RIGHT_PAREN { A.or_ l }
@@ -277,7 +285,8 @@ term:
   | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
   | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
   | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN { A.app f args }
-  | LEFT_PAREN AT f=term t=term RIGHT_PAREN { A.ho_app f t }
+  | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { A.ho_app_l f args }
+  | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { A.ho_app f arg }
   | LEFT_PAREN
       MATCH
       lhs=term
@@ -306,10 +315,5 @@ term:
     f=term
     RIGHT_PAREN
     { A.exists vars f }
-  | error
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      A.parse_errorf ~loc "expected term"
-    }
 
 %%
