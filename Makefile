@@ -26,17 +26,19 @@ watch:
 		make ; \
 	done
 
+BENCH_DIR ?= benchmarks/benchmarks/isaplanner/
+
 test-cat: build tip-cat
-	@git submodule update --init
-	@[ -d benchmarks ] || (echo "expect benchmarks/ to exist" && exit 1)
-	@find benchmarks/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.exe -q
-	#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
+	@echo testing that '`parser`' works…
+	@[ -d $(BENCH_DIR) ] || (echo "expect benchmarks/ to exist" && exit 1)
+	@find $(BENCH_DIR) -name  '*.smt2' -print0 | xargs -0 ./tip_cat.exe -q
+
+#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
 
 test-idempotent: build tip-cat
-	@echo test that '`printer | parser`' works
-	@for i in benchmarks/**/*.smt2 ; \
-	  do echo "$$i"; \
-	  (./tip_cat.exe "$$i" | ./tip_cat -q) || exit 1; \
+	@echo testing that '`printer | parser`' works…
+	@find $(BENCH_DIR) -name  '*.smt2' -print | while read i ; do \
+	  (./tip_cat.exe "$$i" | ./tip_cat.exe -q) || exit 1; \
 	  done
 
 .PHONY: doc watch clean test all build
