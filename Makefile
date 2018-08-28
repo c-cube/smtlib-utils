@@ -1,31 +1,23 @@
 
-OPTS=-use-ocamlfind -menhir 'menhir --dump --explain'
-FLAGS= -w +a-4-44 -safe-string
-TARGETS = tip_parser.cma tip_parser.cmxa tip_parser.cmxs tip_cat.native
-TO_INSTALL = $(addprefix _build/src/, $(TARGETS) *.cmi tip_parser.a *.mli) \
-	     $(wildcard _build/src/*.cmt{,i})
+all: build test-dune
 
-all:
-	ocamlbuild $(OPTS) $(TARGETS)
+build:
+	@dune build
 
-clean:
-	ocamlbuild -clean
+tip-cat:
+	@dune build src/bin/tip_cat.exe
+	@ln -sf _build/default/src/bin/tip_cat.exe
 
-install: all
-	ocamlfind install tip_parser META $(TO_INSTALL)
+test: test-dune test-cat test-idempotent
 
-uninstall:
-	ocamlfind remove tip_parser
+test-dune:
+	@dune runtest --force --no-buffer
 
 doc:
-	ocamlbuild $(OPTS) src/tip_parser.docdir/index.html
+	@dune build @doc
 
-upload-doc: doc
-	git checkout gh-pages && \
-	  rm -rf dev/ && \
-	  mkdir -p dev && \
-	  cp -r tip_parser.docdir/* dev/ && \
-	  git add --all dev
+clean:
+	@dune clean
 
 watch:
 	while find src/ -print0 | xargs -0 inotifywait -e delete_self -e modify ; do \
@@ -34,16 +26,17 @@ watch:
 		make ; \
 	done
 
-test: all
+test-cat: build tip-cat
+	@git submodule update --init
 	@[ -d benchmarks ] || (echo "expect benchmarks/ to exist" && exit 1)
-	find benchmarks/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
+	@find benchmarks/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.exe -q
 	#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
 
-test-idempotent: all
+test-idempotent: build tip-cat
 	@echo test that '`printer | parser`' works
 	@for i in benchmarks/**/*.smt2 ; \
 	  do echo "$$i"; \
-	  (./tip_cat.native "$$i" | ./tip_cat.native -q) || exit 1; \
+	  (./tip_cat.exe "$$i" | ./tip_cat -q) || exit 1; \
 	  done
 
-.PHONY: doc upload-doc watch clean test
+.PHONY: doc watch clean test all build

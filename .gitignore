@@ -22,3 +22,5 @@ setup.log
 
 # qtest
 qtest*
+*.exe
+.merlin
