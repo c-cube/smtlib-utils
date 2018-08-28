@@ -14,8 +14,9 @@ let printable_char = [^ '\n']
 let comment_line = ';' printable_char*
 
 let sym = [^ '"' '(' ')' '\\' ' ' '\t' '\r' '\n']
+let invbars = '|' ([^ '\\' '|'] | '\\' '|')+ '|'
 
-let ident = sym+
+let ident = sym+ | invbars
 
 let quoted = '"' ([^ '"'] | '\\' '"')* '"'
 
@@ -35,6 +36,7 @@ rule token = parse
   | "distinct" { DISTINCT }
   | "ite" { IF }
   | "as" { AS }
+  | "_" { AS }
   | "match" { MATCH }
   | "case" { CASE }
   | "default" { DEFAULT }

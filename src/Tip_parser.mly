@@ -10,7 +10,6 @@
 %{
   module A = Tip_ast
   module Loc = Tip_loc
-
 %}
 
 %token EOI
