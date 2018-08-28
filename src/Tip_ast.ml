@@ -87,6 +87,7 @@ and stmt =
   | Stmt_assert of term
   | Stmt_lemma of term
   | Stmt_assert_not of ty_var list * term
+  | Stmt_prove of ty_var list * term
   | Stmt_check_sat
 
 let ty_bool = Ty_bool
@@ -139,6 +140,7 @@ let data ?loc tyvars l = _mk ?loc (Stmt_data (tyvars,l))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
 let lemma ?loc t = _mk ?loc (Stmt_lemma t)
 let assert_not ?loc ~ty_vars t = _mk ?loc (Stmt_assert_not (ty_vars, t))
+let prove ?loc ~ty_vars t = _mk ?loc (Stmt_prove (ty_vars, t))
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
 
 let loc t = t.loc
@@ -223,6 +225,8 @@ let pp_stmt out (st:statement) = match view st with
   | Stmt_lemma t -> fpf out "(@[lemma@ %a@])" pp_term t
   | Stmt_assert_not (ty_vars,t) ->
     fpf out "(@[assert-not@ %a@])" (pp_par pp_term) (ty_vars,t)
+  | Stmt_prove (ty_vars,t) ->
+    fpf out "(@[prove@ %a@])" (pp_par pp_term) (ty_vars,t)
   | Stmt_decl d ->
     fpf out "(@[declare-fun@ %a@])"
       (pp_par (pp_fun_decl pp_ty)) (d.fun_ty_vars,d)

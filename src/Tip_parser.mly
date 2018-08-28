@@ -42,6 +42,7 @@
 %token ASSERT
 %token LEMMA
 %token ASSERT_NOT
+%token PROVE
 %token FORALL
 %token EXISTS
 %token DECLARE_SORT
@@ -131,7 +132,7 @@ funs_rec_decl:
       A.mk_fun_decl ~ty_vars:l f args ret
     }
 
-assert_not:
+par_term:
   | LEFT_PAREN
       PAR LEFT_PAREN tyvars=tyvar+ RIGHT_PAREN t=term
     RIGHT_PAREN
@@ -202,12 +203,21 @@ stmt:
     }
   | LEFT_PAREN
     ASSERT_NOT
-    tup=assert_not
+    tup=par_term
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
       let ty_vars, f = tup in
       A.assert_not ~loc ~ty_vars f
+    }
+  | LEFT_PAREN
+    PROVE
+    tup=par_term
+    RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      let ty_vars, f = tup in
+      A.prove ~loc ~ty_vars f
     }
   | LEFT_PAREN CHECK_SAT RIGHT_PAREN
     {
