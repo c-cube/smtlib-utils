@@ -35,6 +35,7 @@ type term =
   | Match of term * match_branch list
   | If of term * term * term
   | Let of (var * term) list * term
+  | Is_a of string * term (* tester: is-constructor(term) *)
   | Fun of typed_var * term
   | Eq of term * term
   | Imply of term * term
@@ -109,6 +110,7 @@ let fun_l = List.fold_right fun_
 let let_ l t = Let (l,t)
 let eq a b = Eq (a,b)
 let imply a b = Imply(a,b)
+let is_a c t = Is_a (c,t)
 let and_ l = And l
 let or_ l = Or l
 let distinct l = Distinct l
@@ -193,6 +195,7 @@ let rec pp_term out (t:term) = match t with
   | Let (l,t) ->
     let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v pp_term t in
     fpf out "(@[<2>let@ (@[%a@])@ %a@])" (pp_list pp_binding) l pp_term t
+  | Is_a (c,t) -> fpf out "(@[is-%s@ %a@])" c pp_term t
   | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" pp_term a pp_term b
   | Imply (a,b) -> fpf out "(@[=>@ %a@ %a@])" pp_term a pp_term b
   | And l -> fpf out "(@[<hv>and@ %a@])" (pp_list pp_term) l

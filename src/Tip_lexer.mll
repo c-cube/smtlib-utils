@@ -37,6 +37,7 @@ rule token = parse
   | "ite" { IF }
   | "as" { AS }
   | "_" { AS }
+  | "is" { IS }
   | "match" { MATCH }
   | "case" { CASE }
   | "default" { DEFAULT }

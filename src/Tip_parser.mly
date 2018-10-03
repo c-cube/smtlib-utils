@@ -35,6 +35,7 @@
 %token FUN
 %token LET
 %token AS
+%token IS
 %token AT
 
 %token DATA
@@ -308,6 +309,11 @@ composite_term:
       body=term
     RIGHT_PAREN
     { A.fun_l vars body }
+  | LEFT_PAREN
+      LEFT_PAREN AS IS c=IDENT RIGHT_PAREN
+      t=term
+    RIGHT_PAREN
+    { A.is_a c t }
   | LEFT_PAREN
       LET
       LEFT_PAREN l=binding+ RIGHT_PAREN
