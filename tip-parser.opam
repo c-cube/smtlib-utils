@@ -13,7 +13,7 @@ depends: [
   "base-bytes"
   "result"
   "menhir" {build}
-  "odoc" {doc}
+  "odoc" {with-doc}
 ]
 tags: [ "TIP" "parse" "inductive" "logic" ]
 homepage: "https://github.com/c-cube/tip-parser/"
