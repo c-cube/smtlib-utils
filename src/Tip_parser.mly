@@ -35,6 +35,7 @@
 %token FUN
 %token LET
 %token AS
+%token WILDCARD
 %token IS
 %token AT
 
@@ -231,6 +232,7 @@ stmt:
     }
 
 var:
+  | WILDCARD { "_" }
   | s=IDENT { s }
 tyvar:
   | s=IDENT { s }
@@ -250,7 +252,7 @@ ty_arrow_args:
   | a=ty tup=ty_arrow_args { a :: fst tup, snd tup }
 
 typed_var:
-  | LEFT_PAREN s=IDENT ty=ty RIGHT_PAREN { s, ty }
+  | LEFT_PAREN s=var ty=ty RIGHT_PAREN { s, ty }
 
 case:
   | LEFT_PAREN
@@ -310,7 +312,7 @@ composite_term:
     RIGHT_PAREN
     { A.fun_l vars body }
   | LEFT_PAREN
-      LEFT_PAREN AS IS c=IDENT RIGHT_PAREN
+      LEFT_PAREN WILDCARD IS c=IDENT RIGHT_PAREN
       t=term
     RIGHT_PAREN
     { A.is_a c t }

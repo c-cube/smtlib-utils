@@ -36,7 +36,7 @@ rule token = parse
   | "distinct" { DISTINCT }
   | "ite" { IF }
   | "as" { AS }
-  | "_" { AS }
+  | "_" { WILDCARD }
   | "is" { IS }
   | "match" { MATCH }
   | "case" { CASE }
