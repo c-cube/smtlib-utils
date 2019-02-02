@@ -1,8 +1,10 @@
 
 all: build test-dune
 
+dev: build test
+
 build:
-	@dune build
+	@dune build --profile=release
 
 tip-cat:
 	@dune build src/bin/tip_cat.exe
@@ -26,7 +28,7 @@ watch:
 		make ; \
 	done
 
-BENCH_DIR ?= benchmarks/benchmarks/isaplanner/
+BENCH_DIR ?= benchmarks/isaplanner/
 
 test-cat: build tip-cat
 	@echo testing that '`parser`' works…
