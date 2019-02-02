@@ -16,11 +16,8 @@ _build/
 *.native
 *.docdir
 
-# oasis generated files
-setup.data
-setup.log
-
 # qtest
 qtest*
 *.exe
 .merlin
+*.install
