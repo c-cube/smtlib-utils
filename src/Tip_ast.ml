@@ -3,14 +3,7 @@
 
 (** {1 Trivial AST for parsing} *)
 
-let pp_str = Format.pp_print_string
-
-let pp_to_string pp x =
-  let buf = Buffer.create 64 in
-  let fmt = Format.formatter_of_buffer buf in
-  pp fmt x;
-  Format.pp_print_flush fmt ();
-  Buffer.contents buf
+let pp_to_string pp x = Format.asprintf "%a@?" pp x
 
 module Loc = Tip_loc
 
@@ -79,6 +72,8 @@ type statement = {
 }
 
 and stmt =
+  | Stmt_set_logic of string
+  | Stmt_set_info of string * string
   | Stmt_decl_sort of string * int (* arity *)
   | Stmt_decl of ty fun_decl
   | Stmt_fun_def of fun_def
@@ -90,6 +85,7 @@ and stmt =
   | Stmt_assert_not of ty_var list * term
   | Stmt_prove of ty_var list * term
   | Stmt_check_sat
+  | Stmt_exit
 
 let ty_bool = Ty_bool
 let ty_app s l = Ty_app (s,l)
@@ -144,26 +140,38 @@ let lemma ?loc t = _mk ?loc (Stmt_lemma t)
 let assert_not ?loc ~ty_vars t = _mk ?loc (Stmt_assert_not (ty_vars, t))
 let prove ?loc ~ty_vars t = _mk ?loc (Stmt_prove (ty_vars, t))
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
+let exit ?loc () = _mk ?loc Stmt_exit
+let set_logic ?loc l = _mk ?loc @@ Stmt_set_logic l
+let set_info ?loc a b = _mk ?loc @@ Stmt_set_info (a,b)
 
 let loc t = t.loc
 let view t = t.stmt
 
 let fpf = Format.fprintf
 
-let pp_list ?(start="") ?(stop="") ?(sep=" ") pp out l =
-  let rec pp_list l = match l with
+let pp_list pp out l =
+  let rec aux l = match l with
   | x::((_::_) as l) ->
     pp out x;
-    Format.pp_print_string out sep;
-    Format.pp_print_cut out ();
-    pp_list l
+    Format.fprintf out "@ ";
+    aux l
   | x::[] -> pp out x
   | [] -> ()
   in
-  Format.pp_print_string out start;
-  pp_list l;
-  Format.pp_print_string out stop
+  aux l
 
+let pp_str out s =
+  let needs_escaping = ref false in
+  String.iter
+    (function ' ' | '(' | ')' | '\n' | '\t' -> needs_escaping := true | _ -> ())
+    s;
+  if !needs_escaping then (
+    Format.pp_print_char out '|';
+    Format.pp_print_string out s;
+    Format.pp_print_char out '|';
+  ) else (
+    Format.pp_print_string out s
+  )
 
 let pp_tyvar = pp_str
 
@@ -174,46 +182,75 @@ let rec pp_ty out (ty:ty) = match ty with
   | Ty_arrow (args,ret) ->
     fpf out "(@[=>@ %a@ %a@])" (pp_list pp_ty) args pp_ty ret
 
-let rec pp_term out (t:term) = match t with
+let lvl_top = 0
+let lvl_q = 10
+let lvl_let = 20
+let lvl_match = 25
+let lvl_and = 30
+let lvl_or = 31
+let lvl_not = 32
+let lvl_app = 50
+
+let rec pp_term lvl out (t:term) =
+  let self = pp_term lvl in
+  let self' lvl' = pp_term lvl' in
+  let self_a = self' lvl_app in
+  let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v (self' lvl_let) t in
+  let fpf' lvl' out fmt =
+    if lvl <> lvl' then (
+      fpf out "(@["
+    ) else (
+      fpf out "("
+    );
+    Format.kfprintf
+      (fun out -> if lvl <> lvl' then fpf out "@])" else fpf out ")")
+      out fmt
+  in
+  match t with
   | True -> pp_str out "true"
   | False -> pp_str out "false"
   | Const s -> pp_str out s
-  | App (f,l) -> fpf out "(@[<1>%s@ %a@])" f (pp_list pp_term) l
-  | HO_app (a,b) -> fpf out "(@[<1>@@@ %a@ %a@])" pp_term a pp_term b
+  | App (f,l) -> fpf' lvl_app out "%s@ %a" f (pp_list self_a) l
+  | HO_app (a,b) -> fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b
   | Match (lhs,cases) ->
     let pp_case out = function
-      | Match_default rhs -> fpf out "(@[<2>case default@ %a@])" pp_term rhs
+      | Match_default rhs -> fpf out "(@[<1>default@ %a@])" (self' lvl_match) rhs
       | Match_case (c,[],rhs) ->
-        fpf out "(@[<2>case %s@ %a@])" c pp_term rhs
+        fpf out "(@[<1>case %s@ %a@])" c (self' lvl_match) rhs
       | Match_case (c,vars,rhs) ->
-        fpf out "(@[<2>case@ (@[%s@ %a@])@ %a@])" c (pp_list pp_str) vars pp_term rhs
+        fpf out "(@[<1>case@ (@[%s@ %a@])@ %a@])"
+          c (pp_list pp_str) vars (self' lvl_match) rhs
     in
-    fpf out "(@[<1>match@ %a@ @[<v>%a@]@])" pp_term lhs
+    fpf' lvl_match out "match@ %a@ @[<v>%a@]" (self' lvl_top) lhs
       (pp_list pp_case) cases
-  | If (a,b,c) -> fpf out "(@[<hv1>ite %a@ %a@ %a@])" pp_term a pp_term b pp_term c
-  | Fun (v,body) -> fpf out "(@[<1>lambda @ (%a)@ %a@])" pp_typed_var v pp_term body
+  | If (a,b,c) ->
+    fpf' lvl_app out "ite %a@ %a@ %a" self_a a self_a b self_a c
+  | Fun (v,body) ->
+    fpf' lvl_q out "lambda @ (%a)@ %a" pp_typed_var v (self' lvl_q) body
   | Let (l,t) ->
-    let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v pp_term t in
-    fpf out "(@[<2>let@ (@[%a@])@ %a@])" (pp_list pp_binding) l pp_term t
-  | Is_a (c,t) -> fpf out "(@[is-%s@ %a@])" c pp_term t
-  | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" pp_term a pp_term b
-  | Imply (a,b) -> fpf out "(@[=>@ %a@ %a@])" pp_term a pp_term b
-  | And l -> fpf out "(@[<hv>and@ %a@])" (pp_list pp_term) l
-  | Or l -> fpf out "(@[<hv>or@ %a@])" (pp_list pp_term) l
-  | Not t -> fpf out "(not %a)" pp_term t
-  | Distinct l -> fpf out "(@[distinct@ %a@])" (pp_list pp_term) l
-  | Cast (t, ty) -> fpf out "(@[<hv2>as@ @[%a@]@ @[%a@]@])" pp_term t pp_ty ty
+    fpf' lvl_let out "let@ (@[%a@])@ %a" (pp_list pp_binding) l (self' lvl_let) t
+  | Is_a (c,t) -> fpf out "(@[is-%s@ %a@])" c self t
+  | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" self a self b
+  | Imply (a,b) ->
+    fpf' lvl_or out "=>@ %a@ %a" (self' lvl_or) a (self' lvl_or) b
+  | And l -> fpf' lvl_and out "and@ %a" (pp_list @@ self' lvl_and) l
+  | Or l -> fpf' lvl_or out "or@ %a" (pp_list @@ self' lvl_or) l
+  | Not t -> fpf' lvl_not out "not@ %a" (self' lvl_not) t
+  | Distinct l -> fpf out "(@[distinct@ %a@])" (pp_list self) l
+  | Cast (t, ty) -> fpf out "(@[<hv>as@ @[%a@]@ @[%a@]@])" self t pp_ty ty
   | Forall (vars,f) ->
-    fpf out "(@[<hv2>forall@ (@[%a@])@ %a@])" (pp_list pp_typed_var) vars pp_term f
+    fpf' lvl_q out "forall@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
   | Exists (vars,f) ->
-    fpf out "(@[<hv2>exists@ (@[%a@])@ %a@])" (pp_list pp_typed_var) vars pp_term f
+    fpf' lvl_q out "exists@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
 and pp_typed_var out (v,ty) =
   fpf out "(@[%s@ %a@])" v pp_ty ty
+
+let pp_term out t = pp_term lvl_top out t
 
 let pp_par pp_x out (ty_vars,x) = match ty_vars with
   | [] -> pp_x out x
   | _ ->
-    fpf out "(@[<2>par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
+    fpf out "(@[par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
 
 let pp_fun_decl pp_arg out fd =
   fpf out "%s@ (@[%a@])@ %a"
@@ -223,6 +260,9 @@ let pp_fr out fr =
   fpf out "@[<2>%a@ %a@]" (pp_fun_decl pp_typed_var) fr.fr_decl pp_term fr.fr_body
 
 let pp_stmt out (st:statement) = match view st with
+  | Stmt_exit -> fpf out "(exit)"
+  | Stmt_set_info (a,b) -> fpf out "(@[set-info@ %a@ %a@])" pp_str a pp_str b
+  | Stmt_set_logic s -> fpf out "(@[set-logic@ %a@])" pp_str s
   | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_lemma t -> fpf out "(@[lemma@ %a@])" pp_term t
@@ -255,7 +295,7 @@ let pp_stmt out (st:statement) = match view st with
     in
     fpf out "(@[<hv2>declare-datatypes@ (@[%a@])@ (@[<v>%a@])@])"
       (pp_list pp_tyvar) tyvars (pp_list pp_data) l
-  | Stmt_check_sat -> pp_str out "(check-sat)"
+  | Stmt_check_sat -> fpf out "(check-sat)"
 
 (** {2 Errors} *)
 

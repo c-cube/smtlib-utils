@@ -141,6 +141,10 @@ par_term:
   | t=term
   { [], t }
 
+anystr:
+  | s=IDENT {s}
+  | s=QUOTED {s}
+
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
     {
@@ -225,6 +229,16 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.check_sat ~loc ()
     }
+  | LEFT_PAREN s=IDENT args=anystr* RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      match s, args with
+      | "exit", [] -> A.exit ~loc ()
+      | "set-logic", [l] -> A.set_logic ~loc l
+      | "set-info", [a;b] -> A.set_info ~loc a b
+      | _ ->
+        A.parse_errorf ~loc "expected statement"
+    }
   | error
     {
       let loc = Loc.mk_pos $startpos $endpos in
@@ -268,7 +282,7 @@ case:
     RIGHT_PAREN
     { A.Match_case (c, vars, rhs) }
   | LEFT_PAREN
-     CASE DEFAULT rhs=term
+     CASE? DEFAULT rhs=term
     RIGHT_PAREN
     { A.Match_default rhs }
 
