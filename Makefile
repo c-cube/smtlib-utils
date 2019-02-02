@@ -35,7 +35,7 @@ test-cat: build tip-cat
 
 test-idempotent: build tip-cat
 	@echo testing that '`printer | parser`' works…
-	@find $(BENCH_DIR) -name  '*.smt2' -print | while read i ; do \
+	@find benchmarks -name  '*.smt2' -print | while read i ; do \
 	  (./tip_cat.exe "$$i" | ./tip_cat.exe -q) || exit 1; \
 	  done
 
