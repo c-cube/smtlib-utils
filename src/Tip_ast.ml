@@ -160,18 +160,7 @@ let pp_list pp out l =
   in
   aux l
 
-let pp_str out s =
-  let needs_escaping = ref false in
-  String.iter
-    (function ' ' | '(' | ')' | '\n' | '\t' -> needs_escaping := true | _ -> ())
-    s;
-  if !needs_escaping then (
-    Format.pp_print_char out '|';
-    Format.pp_print_string out s;
-    Format.pp_print_char out '|';
-  ) else (
-    Format.pp_print_string out s
-  )
+let pp_str out s = Format.pp_print_string out s
 
 let pp_tyvar = pp_str
 
