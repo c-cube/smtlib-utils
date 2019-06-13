@@ -4,10 +4,10 @@ all: build test-dune
 dev: build test
 
 build:
-	@dune build --profile=release
+	@dune build --profile=release @all
 
 tip-cat:
-	@dune build src/bin/tip_cat.exe
+	@dune build src/bin/tip_cat.exe --profile=release
 	@ln -sf _build/default/src/bin/tip_cat.exe
 
 test: test-dune test-cat test-idempotent
