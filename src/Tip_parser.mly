@@ -77,6 +77,16 @@ cstor:
   | LEFT_PAREN c=IDENT l=cstor_arg+ RIGHT_PAREN
     { A.mk_cstor c l }
 
+%inline ty_decl:
+  | s=IDENT n=IDENT  {
+      let loc = Loc.mk_pos $startpos $endpos in
+      try
+        let n = int_of_string n in
+        s, n
+      with Failure _ ->
+        A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
+}
+
 data:
   | LEFT_PAREN s=IDENT l=cstor+ RIGHT_PAREN { s,l }
 
@@ -156,14 +166,11 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.lemma ~loc t
     }
-  | LEFT_PAREN DECLARE_SORT s=IDENT n=IDENT RIGHT_PAREN
+  | LEFT_PAREN DECLARE_SORT td=ty_decl RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      try
-        let n = int_of_string n in
-        A.decl_sort ~loc s ~arity:n
-      with Failure _ ->
-        A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
+      let s, n = td in
+      A.decl_sort ~loc s ~arity:n
     }
   | LEFT_PAREN DATA
       LEFT_PAREN vars=tyvar* RIGHT_PAREN

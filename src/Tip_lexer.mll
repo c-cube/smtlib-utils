@@ -8,15 +8,24 @@
   module Loc = Tip_loc
   open Tip_parser (* for tokens *)
 
+  let count_newlines lexbuf s : unit =
+    let i = ref 0 in
+    try
+      while !i < String.length s do
+        i := 1 + String.index_from s !i '\n';
+        Lexing.new_line lexbuf;
+      done;
+    with Not_found -> ()
+        
+
 }
 
 let printable_char = [^ '\n']
 let comment_line = ';' printable_char*
 
 let sym = [^ '"' '(' ')' '\\' ' ' '\t' '\r' '\n']
+let atom = sym+
 let invbars = '|' ([^ '\\' '|'] | '\\' '|')+ '|'
-
-let ident = sym+ | invbars
 
 let quoted = '"' ([^ '"'] | '\\' '"')* '"'
 
@@ -61,7 +70,12 @@ rule token = parse
   | "forall" { FORALL }
   | "exists" { EXISTS }
   | "check-sat" { CHECK_SAT }
-  | ident { IDENT(Lexing.lexeme lexbuf) }
+  | atom { IDENT(Lexing.lexeme lexbuf) }
+  | invbars {
+      let s = Lexing.lexeme lexbuf in
+      count_newlines lexbuf s;
+      IDENT(s)
+    }
   | quoted {
       (* TODO: unescape *)
       let s = Lexing.lexeme lexbuf in
