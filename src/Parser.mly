@@ -194,7 +194,7 @@ stmt:
   | LEFT_PAREN DEFINE_FUN f=fun_rec RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.fun_rec ~loc f
+      A.fun_def ~loc f
     }
   | LEFT_PAREN
     DEFINE_FUN_REC
