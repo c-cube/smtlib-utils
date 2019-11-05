@@ -40,9 +40,6 @@
 
 %token DATA
 %token ASSERT
-%token LEMMA
-%token ASSERT_NOT
-%token PROVE
 %token FORALL
 %token EXISTS
 %token DECLARE_SORT
@@ -160,11 +157,6 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.assert_ ~loc t
     }
-  | LEFT_PAREN LEMMA t=term RIGHT_PAREN
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      A.lemma ~loc t
-    }
   | LEFT_PAREN DECLARE_SORT td=ty_decl RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
@@ -211,24 +203,6 @@ stmt:
     {
       let loc = Loc.mk_pos $startpos $endpos in
       A.funs_rec ~loc decls bodies
-    }
-  | LEFT_PAREN
-    ASSERT_NOT
-    tup=par_term
-    RIGHT_PAREN
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      let ty_vars, f = tup in
-      A.assert_not ~loc ~ty_vars f
-    }
-  | LEFT_PAREN
-    PROVE
-    tup=par_term
-    RIGHT_PAREN
-    {
-      let loc = Loc.mk_pos $startpos $endpos in
-      let ty_vars, f = tup in
-      A.prove ~loc ~ty_vars f
     }
   | LEFT_PAREN CHECK_SAT RIGHT_PAREN
     {
