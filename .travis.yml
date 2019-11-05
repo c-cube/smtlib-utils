@@ -5,11 +5,13 @@ services:
 - docker
 env:
   global:
-  - PINS="tip-parser:."
+  - PINS="smtlib-utils:."
   - DISTRO="ubuntu-16.04"
+  - PACKAGE="tip-parser"
   matrix:
-  - PACKAGE="tip-parser" OCAML_VERSION="4.03"
-  - PACKAGE="tip-parser" OCAML_VERSION="4.04"
-  - PACKAGE="tip-parser" OCAML_VERSION="4.05"
-  - PACKAGE="tip-parser" OCAML_VERSION="4.06"
-  - PACKAGE="tip-parser" OCAML_VERSION="4.07"
+  - OCAML_VERSION="4.03"
+    #- OCAML_VERSION="4.04"
+  - OCAML_VERSION="4.05"
+    #- OCAML_VERSION="4.06"
+  - OCAML_VERSION="4.07"
+  - OCAML_VERSION="4.09"
