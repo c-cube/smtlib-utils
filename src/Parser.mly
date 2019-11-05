@@ -36,6 +36,7 @@
 %token WILDCARD
 %token IS
 %token AT
+%token BANG
 
 %token LEQ
 %token LT
@@ -224,6 +225,7 @@ stmt:
       | "exit", [] -> A.exit ~loc ()
       | "set-logic", [l] -> A.set_logic ~loc l
       | "set-info", [a;b] -> A.set_info ~loc a b
+      | "set-option", l -> A.set_option ~loc l
       | _ ->
         A.parse_errorf ~loc "expected statement"
     }
@@ -304,6 +306,9 @@ term:
   | GEQ { A.Geq }
   | GT { A.Gt }
 
+attr:
+  | a=IDENT b=anystr { a,b }
+
 composite_term:
   | LEFT_PAREN t=term RIGHT_PAREN { t }
   | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { A.if_ a b c }
@@ -317,6 +322,7 @@ composite_term:
   | LEFT_PAREN o=arith_op args=term+ RIGHT_PAREN { A.arith o args }
   | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { A.ho_app_l f args }
   | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { A.ho_app f arg }
+  | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { A.attr t attrs }
   | LEFT_PAREN
       MATCH
       lhs=term

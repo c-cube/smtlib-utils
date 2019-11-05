@@ -48,6 +48,7 @@ type term =
   | Cast of term * ty (* type cast *)
   | Forall of (var * ty) list * term
   | Exists of (var * ty) list * term
+  | Attr of term * (string * string) list (* term + attributes *)
 
 and match_branch =
   | Match_default of term
@@ -83,6 +84,7 @@ type statement = {
 and stmt =
   | Stmt_set_logic of string
   | Stmt_set_info of string * string
+  | Stmt_set_option of string list
   | Stmt_decl_sort of string * int (* arity *)
   | Stmt_decl of ty fun_decl
   | Stmt_fun_def of fun_def
@@ -120,6 +122,7 @@ let distinct l = Distinct l
 let cast t ~ty = Cast (t, ty)
 let forall vars f = match vars with [] -> f | _ -> Forall (vars, f)
 let exists vars f = match vars with [] -> f | _ -> Exists (vars, f)
+let attr t l = match l with [] -> t | _ -> Attr (t, l)
 let rec not_ t = match t with
   | Forall (vars,u) -> exists vars (not_ u)
   | Exists (vars,u) -> forall vars (not_ u)
@@ -149,6 +152,7 @@ let check_sat ?loc () = _mk ?loc Stmt_check_sat
 let exit ?loc () = _mk ?loc Stmt_exit
 let set_logic ?loc l = _mk ?loc @@ Stmt_set_logic l
 let set_info ?loc a b = _mk ?loc @@ Stmt_set_info (a,b)
+let set_option ?loc l = _mk ?loc @@ Stmt_set_option l
 
 let loc t = t.loc
 let view t = t.stmt
@@ -190,16 +194,17 @@ let str_of_arith = function
 
 let pp_arith out a = Format.pp_print_string out (str_of_arith a)
 
-let lvl_top = 0
-let lvl_q = 10
-let lvl_let = 20
-let lvl_match = 25
-let lvl_and = 30
-let lvl_or = 31
-let lvl_not = 32
-let lvl_app = 50
+let _lvl_top = 0
 
 let rec pp_term lvl out (t:term) =
+  let lvl_q = 10 in
+  let lvl_let = 20 in
+  let lvl_match = 25 in
+  let lvl_and = 30 in
+  let lvl_or = 31 in
+  let lvl_not = 32 in
+  let lvl_app = 50 in
+
   let self = pp_term lvl in
   let self' lvl' = pp_term lvl' in
   let self_a = self' lvl_app in
@@ -231,7 +236,7 @@ let rec pp_term lvl out (t:term) =
         fpf out "(@[<1>case@ (@[%s@ %a@])@ %a@])"
           c (pp_list pp_str) vars (self' lvl_match) rhs
     in
-    fpf' lvl_match out "match@ %a@ @[<v>%a@]" (self' lvl_top) lhs
+    fpf' lvl_match out "match@ %a@ @[<v>%a@]" (self' _lvl_top) lhs
       (pp_list pp_case) cases
   | If (a,b,c) ->
     fpf' lvl_app out "ite %a@ %a@ %a" self_a a self_a b self_a c
@@ -252,10 +257,13 @@ let rec pp_term lvl out (t:term) =
     fpf' lvl_q out "forall@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
   | Exists (vars,f) ->
     fpf' lvl_q out "exists@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
+  | Attr (t, l) ->
+    let pp_attr out (x,y) = Format.fprintf out "%s %s" x y in
+    fpf' lvl_app out "! @[%a@] %a" (self' lvl_app) t (pp_list pp_attr) l
 and pp_typed_var out (v,ty) =
   fpf out "(@[%s@ %a@])" v pp_ty ty
 
-let pp_term out t = pp_term lvl_top out t
+let pp_term out t = pp_term _lvl_top out t
 
 let pp_par pp_x out (ty_vars,x) = match ty_vars with
   | [] -> pp_x out x
@@ -273,6 +281,7 @@ let pp_stmt out (st:statement) = match view st with
   | Stmt_exit -> fpf out "(exit)"
   | Stmt_set_info (a,b) -> fpf out "(@[set-info@ %a@ %a@])" pp_str a pp_str b
   | Stmt_set_logic s -> fpf out "(@[set-logic@ %a@])" pp_str s
+  | Stmt_set_option l -> fpf out "(@[set-option@ %a@])" (pp_list pp_str) l
   | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_decl d ->

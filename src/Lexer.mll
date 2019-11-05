@@ -62,6 +62,7 @@ rule token = parse
   | "<" { LT }
   | ">=" { GEQ }
   | ">" { GT }
+  | "!" { BANG }
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
   | "declare-sort" { DECLARE_SORT }
