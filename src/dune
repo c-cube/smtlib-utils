@@ -1,9 +1,12 @@
-(menhir (modules Tip_parser))
-(ocamllex (modules Tip_lexer))
+(menhir
+ (modules Parser))
+
+(ocamllex
+ (modules Lexer))
 
 (library
-  (name tip_parser)
-  (public_name tip-parser)
-  (wrapped false)
-  (flags :standard -safe-string -w +a-4-44@8)
-  (libraries bytes result))
+ (name smtlib_utils)
+ (public_name smtlib-utils)
+ (wrapped true)
+ (flags :standard -safe-string)
+ (libraries bytes result))

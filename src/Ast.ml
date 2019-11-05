@@ -1,11 +1,8 @@
-
 (* This file is free software. See file "license" for more details. *)
 
 (** {1 Trivial AST for parsing} *)
 
 let pp_to_string pp x = Format.asprintf "%a@?" pp x
-
-module Loc = Tip_loc
 
 type var = string
 type ty_var = string

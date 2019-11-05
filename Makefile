@@ -6,9 +6,9 @@ dev: build test
 build:
 	@dune build --profile=release @all
 
-tip-cat:
-	@dune build src/bin/tip_cat.exe --profile=release
-	@ln -sf _build/default/src/bin/tip_cat.exe
+smtlib-cat:
+	@dune build src/bin/smtlib_cat.exe --profile=release
+	@ln -sf _build/default/src/bin/smt_cat.exe
 
 test: test-dune test-cat test-idempotent
 
@@ -24,19 +24,17 @@ clean:
 watch:
 	@dune build @all -w
 
-BENCH_DIR ?= benchmarks/isaplanner/
+BENCH_DIR ?= benchmarks/
 
-test-cat: build tip-cat
+test-cat: build smtlib-cat
 	@echo testing that '`parser`' works…
 	@[ -d $(BENCH_DIR) ] || (echo "expect benchmarks/ to exist" && exit 1)
-	@find $(BENCH_DIR) -name  '*.smt2' -print0 | xargs -0 ./tip_cat.exe -q
+	@find $(BENCH_DIR) -name  '*.smt2' -print0 | xargs -0 ./smtlib_cat.exe -q
 
-#find benchmarks-zipper/ -name  '*.smt2' -print0 | xargs -0 ./tip_cat.native -q
-
-test-idempotent: build tip-cat
+test-idempotent: build smtlib-cat
 	@echo testing that '`printer | parser`' works…
 	@find benchmarks -name  '*.smt2' -print | while read i ; do \
-	  (./tip_cat.exe "$$i" | ./tip_cat.exe -q) || exit 1; \
+	  (./smtlib_cat.exe "$$i" | ./smtlib_cat.exe -q) || exit 1; \
 	  done
 
 .PHONY: doc watch clean test all build

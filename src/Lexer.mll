@@ -4,9 +4,8 @@
 (** {1 Lexer for TIP} *)
 
 {
-  module A = Tip_ast
-  module Loc = Tip_loc
-  open Tip_parser (* for tokens *)
+  module A = Ast
+  open Parser (* for tokens *)
 
   let count_newlines lexbuf s : unit =
     let i = ref 0 in

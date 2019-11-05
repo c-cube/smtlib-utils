@@ -8,8 +8,7 @@
    vim:set ft=yacc: *)
 
 %{
-  module A = Tip_ast
-  module Loc = Tip_loc
+  module A = Ast
 %}
 
 %token EOI
@@ -57,10 +56,10 @@
 %token <string>IDENT
 %token <string>QUOTED
 
-%start <Tip_ast.term> parse_term
-%start <Tip_ast.ty> parse_ty
-%start <Tip_ast.statement> parse
-%start <Tip_ast.statement list> parse_list
+%start <Ast.term> parse_term
+%start <Ast.ty> parse_ty
+%start <Ast.statement> parse
+%start <Ast.statement list> parse_list
 
 %%
 
