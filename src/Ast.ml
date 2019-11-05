@@ -10,16 +10,28 @@ type ty_var = string
 (** Polymorphic types *)
 type ty =
   | Ty_bool
+  | Ty_real
   | Ty_app of ty_var * ty list
   | Ty_arrow of ty list * ty
 
 type typed_var = var * ty
+
+type arith_op =
+  | Leq
+  | Lt
+  | Geq
+  | Gt
+  | Add
+  | Minus
+  | Mult
+  | Div
 
 (** {2 AST: S-expressions with locations} *)
 type term =
   | True
   | False
   | Const of string
+  | Arith of arith_op * term list
   | App of string * term list
   | HO_app of term * term (* higher-order application *)
   | Match of term * match_branch list
@@ -84,6 +96,7 @@ and stmt =
 let ty_bool = Ty_bool
 let ty_app s l = Ty_app (s,l)
 let ty_const s = ty_app s []
+let ty_real = Ty_real
 let ty_arrow_l args ret = if args=[] then ret else Ty_arrow (args, ret)
 let ty_arrow a b = ty_arrow_l [a] b
 
@@ -111,6 +124,8 @@ let rec not_ t = match t with
   | Forall (vars,u) -> exists vars (not_ u)
   | Exists (vars,u) -> forall vars (not_ u)
   | _ -> Not t
+
+let arith op l = Arith (op,l)
 
 let _mk ?loc stmt = { loc; stmt }
 
@@ -157,10 +172,23 @@ let pp_tyvar = pp_str
 
 let rec pp_ty out (ty:ty) = match ty with
   | Ty_bool -> pp_str out "Bool"
+  | Ty_real -> pp_str out "Real"
   | Ty_app (s,[]) -> pp_str out s
   | Ty_app (s,l) -> Format.fprintf out "(@[<hv1>%s@ %a@])" s (pp_list pp_ty) l
   | Ty_arrow (args,ret) ->
     fpf out "(@[=>@ %a@ %a@])" (pp_list pp_ty) args pp_ty ret
+
+let str_of_arith = function
+  | Leq -> "<="
+  | Lt -> "<"
+  | Geq -> ">="
+  | Gt -> ">"
+  | Add -> "+"
+  | Minus -> "-"
+  | Mult -> "*"
+  | Div -> "/"
+
+let pp_arith out a = Format.pp_print_string out (str_of_arith a)
 
 let lvl_top = 0
 let lvl_q = 10
@@ -189,6 +217,8 @@ let rec pp_term lvl out (t:term) =
   match t with
   | True -> pp_str out "true"
   | False -> pp_str out "false"
+  | Arith (op,l) ->
+    Format.fprintf out "(@[<hv>%a@ %a@])" pp_arith op (pp_list self_a) l
   | Const s -> pp_str out s
   | App (f,l) -> fpf' lvl_app out "%s@ %a" f (pp_list self_a) l
   | HO_app (a,b) -> fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b

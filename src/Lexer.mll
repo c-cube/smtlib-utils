@@ -35,7 +35,6 @@ rule token = parse
   | comment_line { token lexbuf }
   | '(' { LEFT_PAREN }
   | ')' { RIGHT_PAREN }
-  | "Bool" { BOOL }
   | "true" { TRUE }
   | "false" { FALSE }
   | "or" { OR }
@@ -55,6 +54,14 @@ rule token = parse
   | "=>" { ARROW }
   | "=" { EQ }
   | "@" { AT }
+  | "+" { ADD }
+  | "-" { MINUS }
+  | "*" { PROD }
+  | "/" { DIV }
+  | "<=" { LEQ }
+  | "<" { LT }
+  | ">=" { GEQ }
+  | ">" { GT }
   | "declare-datatypes" { DATA }
   | "assert" { ASSERT }
   | "declare-sort" { DECLARE_SORT }
