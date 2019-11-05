@@ -7,7 +7,7 @@ env:
   global:
   - PINS="smtlib-utils:."
   - DISTRO="ubuntu-16.04"
-  - PACKAGE="tip-parser"
+  - PACKAGE="smtlib-utils"
   matrix:
   - OCAML_VERSION="4.03"
     #- OCAML_VERSION="4.04"
