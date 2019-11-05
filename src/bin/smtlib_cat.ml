@@ -1,9 +1,8 @@
-
 (* This file is free software, copyright Simon Cruanes. See file "LICENSE" for more details. *)
 
 (** {1 Simple parser/printer} *)
 
-module A = Tip_ast
+module A = Smtlib_utils.Ast
 
 let quiet = ref false
 
@@ -17,8 +16,8 @@ let string_of_input = function
 
 let process i =
   let l = match i with
-    | Stdin -> Tip_util.parse_chan_exn stdin
-    | File file -> Tip_util.parse_file_exn file
+    | Stdin -> Smtlib_utils.parse_chan_exn stdin
+    | File file -> Smtlib_utils.parse_file_exn file
   in
   if not !quiet then (
     Format.printf "; from %s@." (string_of_input i);

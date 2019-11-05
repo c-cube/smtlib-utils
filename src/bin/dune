@@ -1,5 +1,5 @@
 
 ; do not install
 (executable
-  (name tip_cat)
-  (libraries tip-parser))
+  (name smtlib_cat)
+  (libraries smtlib-utils))
