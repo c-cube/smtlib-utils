@@ -77,10 +77,16 @@ parse_ty: t=ty EOI { t }
 cstor_arg:
   | LEFT_PAREN name=IDENT ty=ty RIGHT_PAREN { name, ty }
 
+cstor_dec:
+  | LEFT_PAREN c=IDENT l=cstor_arg* RIGHT_PAREN { c, l }
+
 cstor:
-  | LEFT_PAREN c=IDENT RIGHT_PAREN { A.mk_cstor c [] }
-  | LEFT_PAREN c=IDENT l=cstor_arg+ RIGHT_PAREN
-    { A.mk_cstor c l }
+  | dec=cstor_dec { let c,l = dec in A.mk_cstor ~vars:[] c l }
+  | LEFT_PAREN PAR LEFT_PAREN vars=var+ RIGHT_PAREN dec=cstor_dec RIGHT_PAREN
+    { let c,l = dec in A.mk_cstor ~vars c l }
+
+cstors:
+  | LEFT_PAREN l=cstor+ RIGHT_PAREN { l }
 
 %inline ty_decl:
   | s=IDENT n=IDENT  {
@@ -92,8 +98,8 @@ cstor:
         A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
   }
 
-data:
-  | LEFT_PAREN s=IDENT l=cstor+ RIGHT_PAREN { s,l }
+ty_decl_paren:
+  | LEFT_PAREN ty=ty_decl RIGHT_PAREN { ty }
 
 fun_def_mono:
   | f=IDENT
@@ -173,12 +179,12 @@ stmt:
       A.decl_sort ~loc s ~arity:n
     }
   | LEFT_PAREN DATA
-      LEFT_PAREN vars=tyvar* RIGHT_PAREN
-      LEFT_PAREN l=data+ RIGHT_PAREN
+      LEFT_PAREN tys=ty_decl_paren+ RIGHT_PAREN
+      LEFT_PAREN l=cstors+ RIGHT_PAREN
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.data ~loc vars l
+      A.data_zip ~loc tys l
     }
   | LEFT_PAREN DECLARE_FUN tup=fun_decl RIGHT_PAREN
     {

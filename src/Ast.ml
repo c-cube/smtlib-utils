@@ -55,6 +55,7 @@ and match_branch =
   | Match_case of string * var list * term
 
 type cstor = {
+  cstor_ty_vars: ty_var list;
   cstor_name: string;
   cstor_args: (string * ty) list; (* selector+type *)
 }
@@ -90,10 +91,28 @@ and stmt =
   | Stmt_fun_def of fun_def
   | Stmt_fun_rec of fun_def
   | Stmt_funs_rec of funs_rec_def
-  | Stmt_data of ty_var list * (string * cstor list) list
+  | Stmt_data of ((string * int) * cstor list) list
   | Stmt_assert of term
   | Stmt_check_sat
   | Stmt_exit
+
+(** {2 Errors} *)
+
+exception Parse_error of Loc.t option * string
+
+let () = Printexc.register_printer
+    (function
+      | Parse_error (loc, msg) ->
+        let pp out () =
+          Format.fprintf out "parse error at %a:@ %s" Loc.pp_opt loc msg
+        in
+        Some (pp_to_string pp ())
+      | _ -> None)
+
+let parse_error ?loc msg = raise (Parse_error (loc, msg))
+let parse_errorf ?loc msg = Format.ksprintf (parse_error ?loc) msg
+
+(** {2 Constructors} *)
 
 let ty_bool = Ty_bool
 let ty_app s l = Ty_app (s,l)
@@ -132,7 +151,7 @@ let arith op l = Arith (op,l)
 
 let _mk ?loc stmt = { loc; stmt }
 
-let mk_cstor name l : cstor = { cstor_name=name; cstor_args=l }
+let mk_cstor ~vars name l : cstor = { cstor_ty_vars=vars; cstor_name=name; cstor_args=l }
 let mk_fun_decl ~ty_vars f args ret =
   { fun_ty_vars=ty_vars; fun_name=f;
     fun_args=args; fun_ret=ret; }
@@ -146,7 +165,14 @@ let decl_fun ?loc ~tyvars f ty_args ty_ret =
 let fun_def ?loc fr = _mk ?loc (Stmt_fun_def fr)
 let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
 let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
-let data ?loc tyvars l = _mk ?loc (Stmt_data (tyvars,l))
+let data ?loc l = _mk ?loc (Stmt_data l)
+let data_zip ?loc decls cstors =
+  if List.length decls <> List.length cstors then (
+    parse_errorf ?loc
+      "declare-datatypes: mismatched lengths (%d types, %d lists of cstors)"
+      (List.length decls) (List.length cstors)
+  );
+  _mk ?loc (Stmt_data (List.combine decls cstors))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
 let exit ?loc () = _mk ?loc Stmt_exit
@@ -297,32 +323,20 @@ let pp_stmt out (st:statement) = match view st with
     let pp_decl' out d = fpf out "(@[<2>%a@])" (pp_fun_decl pp_typed_var) d in
     fpf out "(@[<hv2>define-funs-rec@ (@[<v>%a@])@ (@[<v>%a@])@])"
       (pp_list pp_decl') fsr.fsr_decls (pp_list pp_term) fsr.fsr_bodies
-  | Stmt_data (tyvars,l) ->
+  | Stmt_data l ->
+    let pp_decl out (name,n) = fpf out "(@[%s %d@])" name n in
     let pp_cstor_arg out (sel,ty) = fpf out "(@[%s %a@])" sel pp_ty ty in
-    let pp_cstor out c =
+    let pp_cstor_raw out c =
       if c.cstor_args = []
       then fpf out "(%s)" c.cstor_name
       else fpf out "(@[<1>%s@ %a@])" c.cstor_name (pp_list pp_cstor_arg) c.cstor_args
     in
-    let pp_data out (s,cstors) =
-      fpf out "(@[<2>%s@ @[<v>%a@]@])" s (pp_list pp_cstor) cstors
+    let pp_cstor out c =
+      pp_par pp_cstor_raw out (c.cstor_ty_vars, c)
     in
+    let pp_cstors_l out cstors = fpf out "(@[<hv1>%a@])" (pp_list pp_cstor) cstors in
+    let decls, cstors_l = List.split l in
     fpf out "(@[<hv2>declare-datatypes@ (@[%a@])@ (@[<v>%a@])@])"
-      (pp_list pp_tyvar) tyvars (pp_list pp_data) l
+      (pp_list pp_decl) decls
+      (pp_list pp_cstors_l) cstors_l
   | Stmt_check_sat -> fpf out "(check-sat)"
-
-(** {2 Errors} *)
-
-exception Parse_error of Loc.t option * string
-
-let () = Printexc.register_printer
-    (function
-      | Parse_error (loc, msg) ->
-        let pp out () =
-          Format.fprintf out "parse error at %a:@ %s" Loc.pp_opt loc msg
-        in
-        Some (pp_to_string pp ())
-      | _ -> None)
-
-let parse_error ?loc msg = raise (Parse_error (loc, msg))
-let parse_errorf ?loc msg = Format.ksprintf (parse_error ?loc) msg
