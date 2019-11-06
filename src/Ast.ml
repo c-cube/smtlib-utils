@@ -244,7 +244,7 @@ let rec pp_term lvl out (t:term) =
     fpf' lvl_q out "lambda @ (%a)@ %a" pp_typed_var v (self' lvl_q) body
   | Let (l,t) ->
     fpf' lvl_let out "let@ (@[%a@])@ %a" (pp_list pp_binding) l (self' lvl_let) t
-  | Is_a (c,t) -> fpf out "(@[is-%s@ %a@])" c self t
+  | Is_a (c,t) -> fpf out "(@[(@[_ is@ %s@])@ %a@])" c self t
   | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" self a self b
   | Imply (a,b) ->
     fpf' lvl_or out "=>@ %a@ %a" (self' lvl_or) a (self' lvl_or) b
