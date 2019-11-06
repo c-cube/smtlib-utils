@@ -73,7 +73,9 @@ rule token = parse
   | "define-funs-rec" { DEFINE_FUNS_REC }
   | "forall" { FORALL }
   | "exists" { EXISTS }
+  | "check-sat-assuming" { CHECK_SAT_ASSUMING }
   | "check-sat" { CHECK_SAT }
+  | "get-value" { GET_VALUE }
   | atom { IDENT(Lexing.lexeme lexbuf) }
   | invbars {
       let s = Lexing.lexeme lexbuf in

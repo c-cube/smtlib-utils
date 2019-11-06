@@ -58,6 +58,8 @@
 %token DEFINE_FUN_REC
 %token DEFINE_FUNS_REC
 %token CHECK_SAT
+%token CHECK_SAT_ASSUMING
+%token GET_VALUE
 
 %token <string>IDENT
 %token <string>QUOTED
@@ -166,6 +168,10 @@ anystr:
   | s=IDENT {s}
   | s=QUOTED {s}
 
+prop_lit:
+  | s=var { s, true }
+  | LEFT_PAREN NOT s=var RIGHT_PAREN { s, false }
+
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
     {
@@ -224,6 +230,16 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.check_sat ~loc ()
     }
+  | LEFT_PAREN CHECK_SAT_ASSUMING l=prop_lit+ RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.check_sat_assuming ~loc l
+    }
+  | LEFT_PAREN GET_VALUE l=term+ RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.get_value ~loc l
+    }
   | LEFT_PAREN s=IDENT args=anystr* RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
@@ -232,6 +248,22 @@ stmt:
       | "set-logic", [l] -> A.set_logic ~loc l
       | "set-info", [a;b] -> A.set_info ~loc a b
       | "set-option", l -> A.set_option ~loc l
+      | "get-option", [a] -> A.get_option ~loc a
+      | "get-info", [a] -> A.get_info ~loc a
+      | "get-assertions", [] -> A.get_assertions ~loc ()
+      | "get-assignment", [] -> A.get_assignment ~loc ()
+      | "get-proof", [] -> A.get_proof ~loc ()
+      | "get-model", [] -> A.get_model ~loc ()
+      | "get-unsat-core", [] -> A.get_unsat_core ~loc ()
+      | "get-unsat-assumptions", [] -> A.get_unsat_assumptions ~loc ()
+      | "reset", [] -> A.reset ~loc ()
+      | "reset-assertions", [] -> A.reset_assertions ~loc ()
+      | "push", [x] ->
+        (try A.push ~loc (int_of_string x) with _ ->
+         A.parse_errorf ~loc "expected an integer argument for push, not %s" x)
+      | "pop", [x] ->
+        (try A.pop ~loc (int_of_string x) with _ ->
+         A.parse_errorf ~loc "expected an integer argument for pop, not %s" x)
       | _ ->
         A.parse_errorf ~loc "expected statement"
     }

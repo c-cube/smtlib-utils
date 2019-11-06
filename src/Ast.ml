@@ -206,6 +206,7 @@ let get_assertions ?loc () = _mk ?loc @@ Stmt_get_assertions
 let get_assignment ?loc () = _mk ?loc @@ Stmt_get_assignment
 let get_value ?loc l = _mk ?loc @@ Stmt_get_value l
 let get_unsat_core ?loc () = _mk ?loc @@ Stmt_get_unsat_core
+let get_unsat_assumptions ?loc () = _mk ?loc @@ Stmt_get_unsat_assumptions
 let reset ?loc () = _mk ?loc Stmt_reset
 let reset_assertions ?loc () = _mk ?loc Stmt_reset_assertions
 
