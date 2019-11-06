@@ -4,4 +4,6 @@ Parser for Smtlib2, and some additional utils.
 
 ## Documentation
 
-- [dev](dev/)
+- [latest](0.1/)
+
+- [0.1](0.1/)
