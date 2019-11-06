@@ -77,6 +77,8 @@ type funs_rec_def = {
   fsr_bodies: term list;
 }
 
+type prop_literal = string * bool
+
 type statement = {
   stmt: stmt;
   loc: Loc.t option;
@@ -93,7 +95,21 @@ and stmt =
   | Stmt_funs_rec of funs_rec_def
   | Stmt_data of ((string * int) * cstor list) list
   | Stmt_assert of term
+  | Stmt_get_assertions
+  | Stmt_get_assignment
+  | Stmt_get_info of string
+  | Stmt_get_model
+  | Stmt_get_option of string
+  | Stmt_get_proof
+  | Stmt_get_unsat_assumptions
+  | Stmt_get_unsat_core
+  | Stmt_get_value of term list
   | Stmt_check_sat
+  | Stmt_check_sat_assuming of prop_literal list
+  | Stmt_pop of int
+  | Stmt_push of int
+  | Stmt_reset
+  | Stmt_reset_assertions
   | Stmt_exit
 
 (** {2 Errors} *)
@@ -175,10 +191,23 @@ let data_zip ?loc decls cstors =
   _mk ?loc (Stmt_data (List.combine decls cstors))
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
+let check_sat_assuming ?loc l = _mk ?loc @@ Stmt_check_sat_assuming l
 let exit ?loc () = _mk ?loc Stmt_exit
 let set_logic ?loc l = _mk ?loc @@ Stmt_set_logic l
 let set_info ?loc a b = _mk ?loc @@ Stmt_set_info (a,b)
+let get_info ?loc s = _mk ?loc @@ Stmt_get_info s
 let set_option ?loc l = _mk ?loc @@ Stmt_set_option l
+let get_option ?loc s = _mk ?loc @@ Stmt_get_option s
+let push ?loc s = _mk ?loc @@ Stmt_push s
+let pop ?loc s = _mk ?loc @@ Stmt_pop s
+let get_proof ?loc () = _mk ?loc @@ Stmt_get_proof
+let get_model ?loc () = _mk ?loc @@ Stmt_get_model
+let get_assertions ?loc () = _mk ?loc @@ Stmt_get_assertions
+let get_assignment ?loc () = _mk ?loc @@ Stmt_get_assignment
+let get_value ?loc l = _mk ?loc @@ Stmt_get_value l
+let get_unsat_core ?loc () = _mk ?loc @@ Stmt_get_unsat_core
+let reset ?loc () = _mk ?loc Stmt_reset
+let reset_assertions ?loc () = _mk ?loc Stmt_reset_assertions
 
 let loc t = t.loc
 let view t = t.stmt
@@ -303,8 +332,10 @@ let pp_fun_decl pp_arg out fd =
 let pp_fr out fr =
   fpf out "@[<2>%a@ %a@]" (pp_fun_decl pp_typed_var) fr.fr_decl pp_term fr.fr_body
 
+let pp_prop_lit out (s,b) =
+  if b then fpf out "%s" s else fpf out "(not %s)" s
+
 let pp_stmt out (st:statement) = match view st with
-  | Stmt_exit -> fpf out "(exit)"
   | Stmt_set_info (a,b) -> fpf out "(@[set-info@ %a@ %a@])" pp_str a pp_str b
   | Stmt_set_logic s -> fpf out "(@[set-logic@ %a@])" pp_str s
   | Stmt_set_option l -> fpf out "(@[set-option@ %a@])" (pp_list pp_str) l
@@ -340,3 +371,19 @@ let pp_stmt out (st:statement) = match view st with
       (pp_list pp_decl) decls
       (pp_list pp_cstors_l) cstors_l
   | Stmt_check_sat -> fpf out "(check-sat)"
+  | Stmt_check_sat_assuming l ->
+    fpf out "(@[<hv>check-sat-assuming@ %a@])" (pp_list pp_prop_lit) l
+  | Stmt_reset -> fpf out "(reset)"
+  | Stmt_reset_assertions -> fpf out "(reset-assertions)"
+  | Stmt_get_assertions -> fpf out "(get-assertions)"
+  | Stmt_get_assignment -> fpf out "(get-assignment)"
+  | Stmt_get_proof -> fpf out "(get-proof)"
+  | Stmt_get_info s -> fpf out "(@[get-info@ %s@])" s
+  | Stmt_get_option s -> fpf out "(@[get-option@ %s@])" s
+  | Stmt_get_model -> fpf out "(get-model)"
+  | Stmt_get_unsat_core -> fpf out "(get-unsat-core)"
+  | Stmt_get_unsat_assumptions -> fpf out "(get-unsat-assumptions)"
+  | Stmt_get_value l -> fpf out "(@[get-value@ %a@])" (pp_list pp_term) l
+  | Stmt_push n -> fpf out "(push %d)" n
+  | Stmt_pop n -> fpf out "(pop %d)" n
+  | Stmt_exit -> fpf out "(exit)"
