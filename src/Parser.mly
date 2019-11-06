@@ -1,8 +1,8 @@
 
 
-(* This file is free software, part of tip-parser. See file "license" for more details. *)
+(* This file is free software, part of smtlib-utils. See file "license" for more details. *)
 
-(** {1 Parser for TIP} *)
+(** {1 Parser for SMTLIB2.6} *)
 
 (* vim:SyntasticToggleMode:
    vim:set ft=yacc: *)
