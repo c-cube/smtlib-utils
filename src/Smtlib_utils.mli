@@ -10,6 +10,8 @@ module V_2_6 : sig
   module Lexer = Lexer
 
   val parse_file_exn : string -> Ast.statement list
+  (** Parse the given file.
+      @raise Ast.Parse_error in case of error *)
 
   val parse_file : string -> (Ast.statement list, string) Result.result
 
@@ -17,9 +19,20 @@ module V_2_6 : sig
     ?filename:string ->
     in_channel ->
     Ast.statement list
+  (** Parse the given channel.
+      @raise Ast.Parse_error in case of error *)
 
   val parse_chan :
     ?filename:string ->
     in_channel ->
     (Ast.statement list, string) Result.result
+
+  val parse_string_exn : string -> Ast.statement list
+  (** Parse content of the string
+      @raise Ast.Parse_error in case of error
+      @since NEXT_RELEASE *)
+
+  val parse_string : string -> (Ast.statement list, string) Result.result
+  (** Parse content of the string
+      @since NEXT_RELEASE *)
 end
