@@ -1,0 +1,7 @@
+
+(executable
+  (name smtlib_lsp)
+  (public_name smtlib_lsp)
+  (package smtlib-lsp)
+  (flags :standard -warn-error -a+8)
+  (libraries smtlib_utils containers lsp))
