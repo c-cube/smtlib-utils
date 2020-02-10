@@ -29,17 +29,17 @@ module State = struct
     | SU.Ast.Parse_error (loc, msg) ->
       Error (loc, msg)
 
-  let range_of_loc (l:SU.Loc.t) : P.range =
-    {P.
-      start_= {P.character=l.start_column-1; line=l.start_line-1};
-      end_={P.character=l.stop_column-1; line=l.stop_line-1};
+  let range_of_loc (l:SU.Loc.t) : P.Range.t =
+    {P.Range.
+      start_= {P.Position.character=l.start_column-1; line=l.start_line-1};
+      end_={P.Position.character=l.stop_column-1; line=l.stop_line-1};
     }
 
   let on_initialize _rpc st (params:P.Initialize.params) =
     Lsp.Logger.log ~section ~title:"on-req" "";
     let r = {
       P.Initialize.server_capabilities={
-        P.Initialize.empty_server_capabilities
+        P.empty_server_capabilities
         with hoverProvider=false;
       }} in
     Ok (st, r)
