@@ -28,8 +28,6 @@
 %token EQ
 %token IF
 %token MATCH
-%token CASE
-%token DEFAULT
 %token FUN
 %token LET
 %token AS
@@ -303,19 +301,17 @@ typed_var:
 
 case:
   | LEFT_PAREN
-      CASE
       c=IDENT
       rhs=term
     RIGHT_PAREN
     { A.Match_case (c, [], rhs) }
   | LEFT_PAREN
-      CASE
       LEFT_PAREN c=IDENT vars=var+ RIGHT_PAREN
       rhs=term
     RIGHT_PAREN
     { A.Match_case (c, vars, rhs) }
   | LEFT_PAREN
-     CASE? DEFAULT rhs=term
+     WILDCARD rhs=term
     RIGHT_PAREN
     { A.Match_default rhs }
 
@@ -364,7 +360,9 @@ composite_term:
   | LEFT_PAREN
       MATCH
       lhs=term
-      l=case+
+        LEFT_PAREN
+        l=case+
+        RIGHT_PAREN
     RIGHT_PAREN
     { A.match_ lhs l }
   | LEFT_PAREN

@@ -46,8 +46,6 @@ rule token = parse
   | "_" { WILDCARD }
   | "is" { IS }
   | "match" { MATCH }
-  | "case" { CASE }
-  | "default" { DEFAULT }
   | "lambda" { FUN }
   | "let" { LET }
   | "par" { PAR }

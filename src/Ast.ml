@@ -285,14 +285,14 @@ let rec pp_term lvl out (t:term) =
   | HO_app (a,b) -> fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b
   | Match (lhs,cases) ->
     let pp_case out = function
-      | Match_default rhs -> fpf out "(@[<1>default@ %a@])" (self' lvl_match) rhs
+      | Match_default rhs -> fpf out "(@[<1>_@ %a@])" (self' lvl_match) rhs
       | Match_case (c,[],rhs) ->
-        fpf out "(@[<1>case %s@ %a@])" c (self' lvl_match) rhs
+        fpf out "(@[<1>%s@ %a@])" c (self' lvl_match) rhs
       | Match_case (c,vars,rhs) ->
-        fpf out "(@[<1>case@ (@[%s@ %a@])@ %a@])"
+        fpf out "(@[<1>(@[%s@ %a@])@ %a@])"
           c (pp_list pp_str) vars (self' lvl_match) rhs
     in
-    fpf' lvl_match out "match@ %a@ @[<v>%a@]" (self' _lvl_top) lhs
+    fpf' lvl_match out "match@ %a@ (@[<v>%a@])" (self' _lvl_top) lhs
       (pp_list pp_case) cases
   | If (a,b,c) ->
     fpf' lvl_app out "ite %a@ %a@ %a" self_a a self_a b self_a c
