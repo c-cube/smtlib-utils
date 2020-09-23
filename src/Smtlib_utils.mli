@@ -30,9 +30,9 @@ module V_2_6 : sig
   val parse_string_exn : string -> Ast.statement list
   (** Parse content of the string
       @raise Ast.Parse_error in case of error
-      @since NEXT_RELEASE *)
+      @since 0.2 *)
 
   val parse_string : string -> (Ast.statement list, string) Result.result
   (** Parse content of the string
-      @since NEXT_RELEASE *)
+      @since 0.2 *)
 end
