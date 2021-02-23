@@ -287,10 +287,10 @@ let rec pp_term lvl out (t:term) =
     let pp_case out = function
       | Match_default rhs -> fpf out "(@[<1>_@ %a@])" (self' lvl_match) rhs
       | Match_case (c,[],rhs) ->
-        fpf out "(@[<1>%s@ %a@])" c (self' lvl_match) rhs
+        fpf out "(@[<1>%s@ %a@])" c (self' _lvl_top) rhs
       | Match_case (c,vars,rhs) ->
         fpf out "(@[<1>(@[%s@ %a@])@ %a@])"
-          c (pp_list pp_str) vars (self' lvl_match) rhs
+          c (pp_list pp_str) vars (self' _lvl_top) rhs
     in
     fpf' lvl_match out "match@ %a@ (@[<v>%a@])" (self' _lvl_top) lhs
       (pp_list pp_case) cases
