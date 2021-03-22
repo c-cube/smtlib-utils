@@ -15,6 +15,12 @@ module V_2_6 : sig
 
   val parse_file : string -> (Ast.statement list, string) Result.result
 
+  val parse_list : Lexing.lexbuf -> (Ast.statement list, string) Result.result
+  (** @since 0.3 *)
+
+  val parse_list_exn : Lexing.lexbuf -> Ast.statement list
+  (** @since 0.3 *)
+
   val parse_chan_exn :
     ?filename:string ->
     in_channel ->

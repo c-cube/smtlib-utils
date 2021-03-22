@@ -18,17 +18,21 @@ module V_2_6 = struct
       close_in_noerr ic;
       raise e
 
-  let parse_lexbuf_exn_ lexbuf =
+  let parse_list_exn lexbuf =
     try
       Parser.parse_list Lexer.token lexbuf
     with
     | Parsing.Parse_error ->
       raise (Ast.Parse_error (Some (Loc.of_lexbuf lexbuf), "syntax error"))
 
+  let parse_list lexbuf =
+    try Ok (parse_list_exn lexbuf)
+    with e -> Result.Error (Printexc.to_string e)
+
   let parse_chan_exn ?(filename="<no name>") ic =
     let lexbuf = Lexing.from_channel ic in
     Loc.set_file lexbuf filename;
-    parse_lexbuf_exn_ lexbuf
+    parse_list_exn lexbuf
 
   let parse_chan ?filename ic =
     try Result.Ok (parse_chan_exn ?filename ic)
@@ -44,7 +48,7 @@ module V_2_6 = struct
   let parse_string_exn s =
     let lexbuf = Lexing.from_string s in
     Loc.set_file lexbuf "<memory>";
-    parse_lexbuf_exn_ lexbuf
+    parse_list_exn lexbuf
 
   let parse_string s =
     try Result.Ok (parse_string_exn s)
