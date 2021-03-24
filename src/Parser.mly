@@ -228,7 +228,7 @@ stmt:
       let loc = Loc.mk_pos $startpos $endpos in
       A.check_sat ~loc ()
     }
-  | LEFT_PAREN CHECK_SAT_ASSUMING l=prop_lit+ RIGHT_PAREN
+  | LEFT_PAREN CHECK_SAT_ASSUMING LEFT_PAREN l=prop_lit* RIGHT_PAREN RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
       A.check_sat_assuming ~loc l
