@@ -30,12 +30,12 @@ BENCH_DIR ?= benchmarks/
 test-cat: build smtlib-cat
 	@echo testing that '`parser`' works…
 	@[ -d $(BENCH_DIR) ] || (echo "expect benchmarks/ to exist" && exit 1)
-	@find -L $(BENCH_DIR) -name  '*.smt2' -print0 | xargs -0 ./smtlib_cat.exe -q
+	@find -L $(BENCH_DIR) -name  '*.smt2' -print0 | xargs -0 ./smtlib_cat.exe -p -q
 
 test-idempotent: build smtlib-cat
 	@echo testing that '`printer | parser`' works…
 	@find -L $(BENCH_DIR) -name  '*.smt2' -print | while read i ; do \
-	  (./smtlib_cat.exe "$$i" | ./smtlib_cat.exe -q) || exit 1; \
+	  (./smtlib_cat.exe -p "$$i" | ./smtlib_cat.exe -q) || exit 1; \
 	  done
 
 .PHONY: doc watch clean test all build
