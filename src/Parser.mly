@@ -9,6 +9,45 @@
 
 %{
   module A = Ast
+
+  let consts =
+    let tbl = Hashtbl.create 32 in
+    let mkc c name ~loc = function
+      | [] -> c
+      | _ ->
+        A.parse_errorf ~loc "wrong arity for constant %s" name
+    and mkf1 f name ~loc = function
+      | [t] -> f t
+      | _ ->
+        A.parse_errorf ~loc "wrong arity for unary function %s" name
+    and mkl f _name ~loc:_ args =
+      f args
+    and arith_op op _name ~loc:_ args =
+      A.arith op args
+    in
+    List.iter (fun (s,f) -> Hashtbl.add tbl s f) [
+      ("true", mkc A.true_);
+      ("false", mkc A.false_);
+      ("or", mkl A.or_);
+      ("and", mkl A.and_);
+      ("not", mkf1 A.not_);
+      ("+", arith_op A.Add);
+      ("-", arith_op A.Minus);
+      ("*", arith_op A.Mult);
+      ("/", arith_op A.Div);
+      ("<=", arith_op A.Leq);
+      ("<", arith_op A.Lt);
+      (">=", arith_op A.Geq);
+      (">", arith_op A.Gt);
+    ];
+    tbl
+
+  let apply_const ~loc name args =
+    try
+      let f = Hashtbl.find consts name in
+      f name ~loc args
+    with Not_found ->
+      if args=[] then A.const name else A.app name args
 %}
 
 %token EOI
@@ -19,12 +58,7 @@
 %token PAR
 %token ARROW
 
-%token TRUE
-%token FALSE
-%token OR
-%token AND
 %token DISTINCT
-%token NOT
 %token EQ
 %token IF
 %token MATCH
@@ -35,15 +69,6 @@
 %token IS
 %token AT
 %token BANG
-
-%token LEQ
-%token LT
-%token GEQ
-%token GT
-%token ADD
-%token MINUS
-%token PROD
-%token DIV
 
 %token DATA
 %token ASSERT
@@ -168,7 +193,12 @@ anystr:
 
 prop_lit:
   | s=var { s, true }
-  | LEFT_PAREN NOT s=var RIGHT_PAREN { s, false }
+  | LEFT_PAREN not_=IDENT s=var RIGHT_PAREN {
+    if not_ = "not" then s, false
+    else
+      let loc = Loc.mk_pos $startpos $endpos in
+      A.parse_errorf ~loc "expected `not`, not `%s`" not_
+    }
 
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
@@ -319,10 +349,11 @@ binding:
   | LEFT_PAREN v=var t=term RIGHT_PAREN { v, t }
 
 term:
-  | TRUE { A.true_ }
-  | FALSE { A.false_ }
   | s=QUOTED { A.const s }
-  | s=IDENT { A.const s }
+  | s=IDENT {
+    let loc = Loc.mk_pos $startpos $endpos in
+    apply_const ~loc s []
+    }
   | t=composite_term { t }
   | error
     {
@@ -330,30 +361,16 @@ term:
       A.parse_errorf ~loc "expected term"
     }
 
-%inline arith_op:
-  | ADD { A.Add }
-  | MINUS { A.Minus }
-  | PROD { A.Mult }
-  | DIV { A.Div }
-  | LEQ { A.Leq }
-  | LT { A.Lt }
-  | GEQ { A.Geq }
-  | GT { A.Gt }
-
 attr:
   | a=IDENT b=anystr { a,b }
 
 composite_term:
   | LEFT_PAREN t=term RIGHT_PAREN { t }
   | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { A.if_ a b c }
-  | LEFT_PAREN OR l=term+ RIGHT_PAREN { A.or_ l }
-  | LEFT_PAREN AND l=term+ RIGHT_PAREN { A.and_ l }
-  | LEFT_PAREN NOT t=term RIGHT_PAREN { A.not_ t }
   | LEFT_PAREN DISTINCT l=term+ RIGHT_PAREN { A.distinct l }
   | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
   | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
   | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN { A.app f args }
-  | LEFT_PAREN o=arith_op args=term+ RIGHT_PAREN { A.arith o args }
   | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { A.ho_app_l f args }
   | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { A.ho_app f arg }
   | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { A.attr t attrs }
