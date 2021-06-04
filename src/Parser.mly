@@ -370,7 +370,9 @@ composite_term:
   | LEFT_PAREN DISTINCT l=term+ RIGHT_PAREN { A.distinct l }
   | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
   | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
-  | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN { A.app f args }
+  | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN {
+    let loc = Loc.mk_pos $startpos $endpos in
+    apply_const ~loc f args }
   | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { A.ho_app_l f args }
   | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { A.ho_app f arg }
   | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { A.attr t attrs }
