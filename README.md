@@ -1,4 +1,4 @@
-# Smtlib_utils [![Build Status](https://travis-ci.org/c-cube/smtlib-utils.svg?branch=master)](https://travis-ci.org/c-cube/smtlib-utils)
+# Smtlib-utils [![Build](https://github.com/c-cube/smtlib-utils/actions/workflows/main.yml/badge.svg)](https://github.com/c-cube/smtlib-utils/actions/workflows/main.yml)
 
 Parser for [SMTLIB2]([200~http://smtlib.cs.uiowa.edu/), in OCaml, along
 with some utilities for my own usage. It depends on menhir.
