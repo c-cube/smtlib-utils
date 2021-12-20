@@ -1,4 +1,5 @@
 (menhir
+  (infer false)
  (modules Parser))
 
 (ocamllex

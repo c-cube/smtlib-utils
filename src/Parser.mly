@@ -8,7 +8,9 @@
    vim:set ft=yacc: *)
 
 %{
+  include struct
   module A = Ast
+  end
 
   let consts =
     let tbl = Hashtbl.create 32 in
