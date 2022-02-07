@@ -8,11 +8,9 @@
    vim:set ft=yacc: *)
 
 %{
-  include struct
-  module A = Ast
-  end
 
   let consts =
+    let module A = Ast in
     let tbl = Hashtbl.create 32 in
     let mkc c name ~loc = function
       | [] -> c
@@ -45,6 +43,7 @@
     tbl
 
   let apply_const ~loc name args =
+    let module A = Ast in
     try
       let f = Hashtbl.find consts name in
       f name ~loc args
@@ -108,9 +107,9 @@ cstor_dec:
   | LEFT_PAREN c=IDENT l=cstor_arg* RIGHT_PAREN { c, l }
 
 cstor:
-  | dec=cstor_dec { let c,l = dec in A.mk_cstor ~vars:[] c l }
+  | dec=cstor_dec { let c,l = dec in Ast.mk_cstor ~vars:[] c l }
   | LEFT_PAREN PAR LEFT_PAREN vars=var+ RIGHT_PAREN dec=cstor_dec RIGHT_PAREN
-    { let c,l = dec in A.mk_cstor ~vars c l }
+    { let c,l = dec in Ast.mk_cstor ~vars c l }
 
 cstors:
   | LEFT_PAREN l=cstor+ RIGHT_PAREN { l }
@@ -122,7 +121,7 @@ cstors:
         let n = int_of_string n in
         s, n
       with Failure _ ->
-        A.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
+        Ast.parse_errorf ~loc "expected arity to be an integer, not `%s`" n
   }
 
 ty_decl_paren:
@@ -153,7 +152,7 @@ fun_rec:
   | tup=fun_def_mono body=term
     {
       let f, args, ret = tup in
-      A.mk_fun_rec ~ty_vars:[] f args ret body
+      Ast.mk_fun_rec ~ty_vars:[] f args ret body
     }
   | LEFT_PAREN
       PAR
@@ -162,14 +161,14 @@ fun_rec:
     RIGHT_PAREN
     {
       let f, args, ret = tup in
-      A.mk_fun_rec ~ty_vars:l f args ret body
+      Ast.mk_fun_rec ~ty_vars:l f args ret body
     }
 
 funs_rec_decl:
   | LEFT_PAREN tup=fun_def_mono RIGHT_PAREN
     {
       let f, args, ret = tup in
-      A.mk_fun_decl ~ty_vars:[] f args ret
+      Ast.mk_fun_decl ~ty_vars:[] f args ret
     }
   | LEFT_PAREN
       PAR
@@ -178,7 +177,7 @@ funs_rec_decl:
     RIGHT_PAREN
     {
       let f, args, ret = tup in
-      A.mk_fun_decl ~ty_vars:l f args ret
+      Ast.mk_fun_decl ~ty_vars:l f args ret
     }
 
 par_term:
@@ -199,20 +198,20 @@ prop_lit:
     if not_ = "not" then s, false
     else
       let loc = Loc.mk_pos $startpos $endpos in
-      A.parse_errorf ~loc "expected `not`, not `%s`" not_
+      Ast.parse_errorf ~loc "expected `not`, not `%s`" not_
     }
 
 stmt:
   | LEFT_PAREN ASSERT t=term RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.assert_ ~loc t
+      Ast.assert_ ~loc t
     }
   | LEFT_PAREN DECLARE_SORT td=ty_decl RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
       let s, n = td in
-      A.decl_sort ~loc s ~arity:n
+      Ast.decl_sort ~loc s ~arity:n
     }
   | LEFT_PAREN DATA
       LEFT_PAREN tys=ty_decl_paren+ RIGHT_PAREN
@@ -220,23 +219,23 @@ stmt:
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.data_zip ~loc tys l
+      Ast.data_zip ~loc tys l
     }
   | LEFT_PAREN DECLARE_FUN tup=fun_decl RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
       let tyvars, f, args, ret = tup in
-      A.decl_fun ~loc ~tyvars f args ret
+      Ast.decl_fun ~loc ~tyvars f args ret
     }
   | LEFT_PAREN DECLARE_CONST f=IDENT ty=ty RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.decl_fun ~loc ~tyvars:[] f [] ty
+      Ast.decl_fun ~loc ~tyvars:[] f [] ty
     }
   | LEFT_PAREN DEFINE_FUN f=fun_rec RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.fun_def ~loc f
+      Ast.fun_def ~loc f
     }
   | LEFT_PAREN
     DEFINE_FUN_REC
@@ -244,7 +243,7 @@ stmt:
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.fun_rec ~loc f
+      Ast.fun_rec ~loc f
     }
   | LEFT_PAREN
     DEFINE_FUNS_REC
@@ -253,54 +252,54 @@ stmt:
     RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.funs_rec ~loc decls bodies
+      Ast.funs_rec ~loc decls bodies
     }
   | LEFT_PAREN CHECK_SAT RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.check_sat ~loc ()
+      Ast.check_sat ~loc ()
     }
   | LEFT_PAREN CHECK_SAT_ASSUMING LEFT_PAREN l=prop_lit* RIGHT_PAREN RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.check_sat_assuming ~loc l
+      Ast.check_sat_assuming ~loc l
     }
   | LEFT_PAREN GET_VALUE l=term+ RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.get_value ~loc l
+      Ast.get_value ~loc l
     }
   | LEFT_PAREN s=IDENT args=anystr* RIGHT_PAREN
     {
       let loc = Loc.mk_pos $startpos $endpos in
       match s, args with
-      | "exit", [] -> A.exit ~loc ()
-      | "set-logic", [l] -> A.set_logic ~loc l
-      | "set-info", [a;b] -> A.set_info ~loc a b
-      | "set-option", l -> A.set_option ~loc l
-      | "get-option", [a] -> A.get_option ~loc a
-      | "get-info", [a] -> A.get_info ~loc a
-      | "get-assertions", [] -> A.get_assertions ~loc ()
-      | "get-assignment", [] -> A.get_assignment ~loc ()
-      | "get-proof", [] -> A.get_proof ~loc ()
-      | "get-model", [] -> A.get_model ~loc ()
-      | "get-unsat-core", [] -> A.get_unsat_core ~loc ()
-      | "get-unsat-assumptions", [] -> A.get_unsat_assumptions ~loc ()
-      | "reset", [] -> A.reset ~loc ()
-      | "reset-assertions", [] -> A.reset_assertions ~loc ()
+      | "exit", [] -> Ast.exit ~loc ()
+      | "set-logic", [l] -> Ast.set_logic ~loc l
+      | "set-info", [a;b] -> Ast.set_info ~loc a b
+      | "set-option", l -> Ast.set_option ~loc l
+      | "get-option", [a] -> Ast.get_option ~loc a
+      | "get-info", [a] -> Ast.get_info ~loc a
+      | "get-assertions", [] -> Ast.get_assertions ~loc ()
+      | "get-assignment", [] -> Ast.get_assignment ~loc ()
+      | "get-proof", [] -> Ast.get_proof ~loc ()
+      | "get-model", [] -> Ast.get_model ~loc ()
+      | "get-unsat-core", [] -> Ast.get_unsat_core ~loc ()
+      | "get-unsat-assumptions", [] -> Ast.get_unsat_assumptions ~loc ()
+      | "reset", [] -> Ast.reset ~loc ()
+      | "reset-assertions", [] -> Ast.reset_assertions ~loc ()
       | "push", [x] ->
-        (try A.push ~loc (int_of_string x) with _ ->
-         A.parse_errorf ~loc "expected an integer argument for push, not %s" x)
+        (try Ast.push ~loc (int_of_string x) with _ ->
+         Ast.parse_errorf ~loc "expected an integer argument for push, not %s" x)
       | "pop", [x] ->
-        (try A.pop ~loc (int_of_string x) with _ ->
-         A.parse_errorf ~loc "expected an integer argument for pop, not %s" x)
+        (try Ast.pop ~loc (int_of_string x) with _ ->
+         Ast.parse_errorf ~loc "expected an integer argument for pop, not %s" x)
       | _ ->
-        A.parse_errorf ~loc "expected statement"
+        Ast.parse_errorf ~loc "expected statement"
     }
   | error
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.parse_errorf ~loc "expected statement"
+      Ast.parse_errorf ~loc "expected statement"
     }
 
 var:
@@ -312,17 +311,17 @@ tyvar:
 ty:
   | s=IDENT {
     begin match s with
-      | "Bool" -> A.ty_bool
-      | "Real" -> A.ty_real
-      | _ -> A.ty_const s
+      | "Bool" -> Ast.ty_bool
+      | "Real" -> Ast.ty_real
+      | _ -> Ast.ty_const s
     end
     }
   | LEFT_PAREN s=IDENT args=ty+ RIGHT_PAREN
-    { A.ty_app s args }
+    { Ast.ty_app s args }
   | LEFT_PAREN ARROW tup=ty_arrow_args RIGHT_PAREN
     {
       let args, ret = tup in
-      A.ty_arrow_l args ret }
+      Ast.ty_arrow_l args ret }
 
 ty_arrow_args:
   | a=ty ret=ty { [a], ret }
@@ -336,22 +335,22 @@ case:
       c=IDENT
       rhs=term
     RIGHT_PAREN
-    { A.Match_case (c, [], rhs) }
+    { Ast.Match_case (c, [], rhs) }
   | LEFT_PAREN
       LEFT_PAREN c=IDENT vars=var+ RIGHT_PAREN
       rhs=term
     RIGHT_PAREN
-    { A.Match_case (c, vars, rhs) }
+    { Ast.Match_case (c, vars, rhs) }
   | LEFT_PAREN
      WILDCARD rhs=term
     RIGHT_PAREN
-    { A.Match_default rhs }
+    { Ast.Match_default rhs }
 
 binding:
   | LEFT_PAREN v=var t=term RIGHT_PAREN { v, t }
 
 term:
-  | s=QUOTED { A.const s }
+  | s=QUOTED { Ast.const s }
   | s=IDENT {
     let loc = Loc.mk_pos $startpos $endpos in
     apply_const ~loc s []
@@ -360,7 +359,7 @@ term:
   | error
     {
       let loc = Loc.mk_pos $startpos $endpos in
-      A.parse_errorf ~loc "expected term"
+      Ast.parse_errorf ~loc "expected term"
     }
 
 attr:
@@ -368,16 +367,16 @@ attr:
 
 composite_term:
   | LEFT_PAREN t=term RIGHT_PAREN { t }
-  | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { A.if_ a b c }
-  | LEFT_PAREN DISTINCT l=term+ RIGHT_PAREN { A.distinct l }
-  | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { A.eq a b }
-  | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { A.imply a b }
+  | LEFT_PAREN IF a=term b=term c=term RIGHT_PAREN { Ast.if_ a b c }
+  | LEFT_PAREN DISTINCT l=term+ RIGHT_PAREN { Ast.distinct l }
+  | LEFT_PAREN EQ a=term b=term RIGHT_PAREN { Ast.eq a b }
+  | LEFT_PAREN ARROW a=term b=term RIGHT_PAREN { Ast.imply a b }
   | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN {
     let loc = Loc.mk_pos $startpos $endpos in
     apply_const ~loc f args }
-  | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { A.ho_app_l f args }
-  | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { A.ho_app f arg }
-  | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { A.attr t attrs }
+  | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { Ast.ho_app_l f args }
+  | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { Ast.ho_app f arg }
+  | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { Ast.attr t attrs }
   | LEFT_PAREN
       MATCH
       lhs=term
@@ -385,33 +384,33 @@ composite_term:
         l=case+
         RIGHT_PAREN
     RIGHT_PAREN
-    { A.match_ lhs l }
+    { Ast.match_ lhs l }
   | LEFT_PAREN
       FUN
       LEFT_PAREN vars=typed_var+ RIGHT_PAREN
       body=term
     RIGHT_PAREN
-    { A.fun_l vars body }
+    { Ast.fun_l vars body }
   | LEFT_PAREN
       LEFT_PAREN WILDCARD IS c=IDENT RIGHT_PAREN
       t=term
     RIGHT_PAREN
-    { A.is_a c t }
+    { Ast.is_a c t }
   | LEFT_PAREN
       LET
       LEFT_PAREN l=binding+ RIGHT_PAREN
       r=term
     RIGHT_PAREN
-    { A.let_ l r }
+    { Ast.let_ l r }
   | LEFT_PAREN AS t=term ty=ty RIGHT_PAREN
-    { A.cast t ~ty }
+    { Ast.cast t ~ty }
   | LEFT_PAREN FORALL LEFT_PAREN vars=typed_var+ RIGHT_PAREN
     f=term
     RIGHT_PAREN
-    { A.forall vars f }
+    { Ast.forall vars f }
   | LEFT_PAREN EXISTS LEFT_PAREN vars=typed_var+ RIGHT_PAREN
     f=term
     RIGHT_PAREN
-    { A.exists vars f }
+    { Ast.exists vars f }
 
 %%
