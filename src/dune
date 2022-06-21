@@ -7,6 +7,4 @@
 (library
  (name smtlib_utils)
  (public_name smtlib-utils)
- (wrapped true)
- (flags :standard -safe-string)
- (libraries bytes result))
+ (flags :standard -warn-error -a+5+8 -safe-string))

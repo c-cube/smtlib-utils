@@ -12,8 +12,6 @@ build: [
 ]
 depends: [
   "dune" { >= "2.0" }
-  "base-bytes"
-  "result"
   "menhir" {build}
   "odoc" {with-doc}
   "ocaml" { >= "4.08.0" }
