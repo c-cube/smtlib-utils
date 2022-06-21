@@ -2,4 +2,4 @@
 ; do not install
 (executable
   (name smtlib_cat)
-  (libraries smtlib-utils))
+  (libraries smtlib-utils catapult catapult-file))
