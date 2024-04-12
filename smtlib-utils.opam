@@ -15,8 +15,8 @@ depends: [
   "menhir" {build & >= "20180523"}
   "odoc" {with-doc}
   "ocaml" { >= "4.08.0" }
-  "catapult" { with-test }
-  "catapult-file" { with-test }
+  "trace" { with-test }
+  "trace-tef" { with-test }
 ]
 tags: [ "SMTLIB" "smt2" "parse" "logic" ]
 homepage: "https://github.com/c-cube/smtlib-utils/"
