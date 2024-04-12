@@ -1,5 +1,9 @@
 name: Build
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 jobs:
   run:
     strategy:
@@ -9,14 +13,17 @@ jobs:
             #- windows-latest
             #- macos-latest
         ocaml-compiler:
-          - 4.08.x
-          - 4.14.x
+          - '4.08'
+          - '4.14'
+          - '5.1'
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: ${{ matrix.ocaml-compiler }}
+        allow-prerelease-opam: true
+        dune-cache: true
     - run: opam pin -n .
     - run: opam depext -yt smtlib-utils
     - run: opam install -t . --deps-only
