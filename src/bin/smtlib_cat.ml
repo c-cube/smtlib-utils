@@ -1,12 +1,13 @@
 
 (** Simple parser/printer program *)
 
-module Trace = Catapult.Tracing
+module Trace = Trace_core
 
 module A = Smtlib_utils.V_2_6.Ast
 
 let progress = ref false
 let quiet = ref false
+let (let@) = (@@)
 
 type input =
   | Stdin
@@ -20,17 +21,18 @@ let string_of_input = function
 let _reset_line = "\x1b[2K\r"
 
 let process i : (_,_) result =
-  Trace.with_ "process-file" ~args:["file", `String (string_of_input i)] @@ fun () ->
+  let@ _sp = Trace.with_span ~__FILE__ ~__LINE__
+"process-file" ~data:(fun () -> ["file", `String (string_of_input i)] ) in
   try
     let l = match i with
       | Stdin -> Smtlib_utils.V_2_6.parse_chan_exn stdin
       | File file ->
         if !progress then Printf.eprintf "%sprocess '%s'…%!" _reset_line file;
-        Trace.with_ "parse"  @@ fun () ->
+        let@ _sp = Trace.with_span  ~__FILE__ ~__LINE__ "parse"  in
         Smtlib_utils.V_2_6.parse_file_exn file
     in
     if not !quiet then (
-      Trace.with_ "pp" @@ fun () ->
+      let@ _sp = Trace.with_span ~__FILE__ ~__LINE__ "pp" in
       Format.printf "; from %s@." (string_of_input i);
       Format.printf "@[<hv>%a@]@." (A.pp_list A.pp_stmt) l
     );
@@ -61,7 +63,7 @@ let options =
   ]
 
 let () =
-  Catapult_file.with_setup @@ fun () ->
+  let@ () = Trace_tef.with_setup ()in
 
   let l = ref [] in
   Arg.parse options (fun s -> l := s :: !l) "usage: tip-cat [file]*";
