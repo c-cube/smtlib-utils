@@ -49,6 +49,7 @@ rule token = parse
   | "@" { AT }
   | "!" { BANG }
   | "declare-datatypes" { DATA }
+  | "declare-datatype" { DATUM }
   | "assert" { ASSERT }
   | "declare-sort" { DECLARE_SORT }
   | "declare-fun" { DECLARE_FUN }

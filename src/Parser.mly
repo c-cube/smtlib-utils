@@ -72,6 +72,7 @@
 %token BANG
 
 %token DATA
+%token DATUM
 %token ASSERT
 %token FORALL
 %token EXISTS
@@ -220,6 +221,14 @@ stmt:
     {
       let loc = Loc.mk_pos $startpos $endpos in
       Ast.data_zip ~loc tys l
+    }
+  | LEFT_PAREN DATUM
+      s=IDENT
+      l=cstors
+    RIGHT_PAREN
+    {
+      let loc = Loc.mk_pos $startpos $endpos in
+      Ast.data_zip ~loc [(s, 0)] [l]
     }
   | LEFT_PAREN DECLARE_FUN tup=fun_decl RIGHT_PAREN
     {
