@@ -21,3 +21,6 @@ qtest*
 *.exe
 .merlin
 *.install
+
+trace.json
+benchmarks
