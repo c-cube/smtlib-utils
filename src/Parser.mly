@@ -24,6 +24,8 @@
       f args
     and arith_op op _name ~loc:_ args =
       A.arith op args
+    and bitvec_op op _name ~loc:_ args =
+      A.bitvec op args
     in
     List.iter (fun (s,f) -> Hashtbl.add tbl s f) [
       ("true", mkc A.true_);
@@ -39,6 +41,19 @@
       ("<", arith_op A.Lt);
       (">=", arith_op A.Geq);
       (">", arith_op A.Gt);
+      ("bvult", bitvec_op A.BVUlt);
+      ("bvslt", bitvec_op A.BVSlt);
+      ("bvnot", bitvec_op A.BVNot);
+      ("bvand", bitvec_op A.BVAnd);
+      ("bvxor", bitvec_op A.BVXor);
+      ("bvshl", bitvec_op A.BVShl);
+      ("bvlsht", bitvec_op A.BVLsht);
+      ("bvashr", bitvec_op A.BVAshr);
+      ("bvadd", bitvec_op A.BVAdd);
+      ("bvmul", bitvec_op A.BVMul);
+      ("bvurem", bitvec_op A.BVURem);
+      ("bvudiv", bitvec_op A.BVUDiv);
+      ("concat", bitvec_op A.Concat);
     ];
     tbl
 
@@ -70,6 +85,8 @@
 %token IS
 %token AT
 %token BANG
+%token SIGN_EXTEND
+%token EXTRACT
 
 %token DATA
 %token DATUM
@@ -85,6 +102,7 @@
 %token CHECK_SAT
 %token CHECK_SAT_ASSUMING
 %token GET_VALUE
+%token BITVEC
 
 %token <string>IDENT
 %token <string>QUOTED
@@ -325,8 +343,12 @@ ty:
       | _ -> Ast.ty_const s
     end
     }
+  | LEFT_PAREN WILDCARD BITVEC n=IDENT RIGHT_PAREN {
+    let loc = Loc.mk_pos $startpos $endpos in
+    try (Ast.ty_bv (int_of_string n)) with _ -> 
+      Ast.parse_errorf ~loc "expected an integer argument for BitVec, not %s" n }
   | LEFT_PAREN s=IDENT args=ty+ RIGHT_PAREN
-    { Ast.ty_app s args }
+    {Ast.ty_app s args }
   | LEFT_PAREN ARROW tup=ty_arrow_args RIGHT_PAREN
     {
       let args, ret = tup in
@@ -383,6 +405,16 @@ composite_term:
   | LEFT_PAREN f=IDENT args=term+ RIGHT_PAREN {
     let loc = Loc.mk_pos $startpos $endpos in
     apply_const ~loc f args }
+  | LEFT_PAREN LEFT_PAREN WILDCARD SIGN_EXTEND i=IDENT RIGHT_PAREN args=term+ RIGHT_PAREN {
+    let loc = Loc.mk_pos $startpos $endpos in
+    try (Ast.bitvec (Ast.Sign_extend (int_of_string i)) args) with _ -> 
+      Ast.parse_errorf ~loc "expected an integer argument for sign_extend, not %s" i
+  }
+  | LEFT_PAREN LEFT_PAREN WILDCARD EXTRACT i=IDENT j=IDENT RIGHT_PAREN args=term+ RIGHT_PAREN {
+    let loc = Loc.mk_pos $startpos $endpos in
+    try (Ast.bitvec (Ast.Extract (int_of_string i, int_of_string j)) args) with _ -> 
+      Ast.parse_errorf ~loc "expected an integer argument for pop, not %s %s" i j
+  }
   | LEFT_PAREN f=composite_term args=term+ RIGHT_PAREN { Ast.ho_app_l f args }
   | LEFT_PAREN AT f=term arg=term RIGHT_PAREN { Ast.ho_app f arg }
   | LEFT_PAREN BANG t=term attrs=attr+ RIGHT_PAREN { Ast.attr t attrs }

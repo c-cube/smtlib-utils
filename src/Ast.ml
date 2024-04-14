@@ -11,6 +11,7 @@ type ty_var = string
 type ty =
   | Ty_bool
   | Ty_real
+  | Ty_bv of int
   | Ty_app of ty_var * ty list
   | Ty_arrow of ty list * ty
 
@@ -26,12 +27,37 @@ type arith_op =
   | Mult
   | Div
 
+  (* We consider a limited set of bitvector operations from the Bitwuzla SMT solver 
+    (https://bitwuzla.github.io/data/fmcad2020/NiemetzPreiner-FMCAD20.pdf). These 
+    operations are complete in the sense that all other bitvector operations can 
+    be written in terms of them*)
+
+type bitvec_op = 
+  | BVUlt 
+  | BVSlt 
+  | BVNot 
+  | BVAnd
+  | BVXor 
+  | BVShl 
+  | BVLsht 
+  | BVAshr 
+  | BVAdd 
+  | BVMul 
+  | BVURem 
+  | BVUDiv
+  | Concat 
+  | Sign_extend of int
+  | Extract of int * int
+
+
+
 (** {2 AST: S-expressions with locations} *)
 type term =
   | True
   | False
   | Const of string
   | Arith of arith_op * term list
+  | Bitvec of bitvec_op * term list
   | App of string * term list
   | HO_app of term * term (* higher-order application *)
   | Match of term * match_branch list
@@ -131,6 +157,8 @@ let parse_errorf ?loc msg = Format.ksprintf (parse_error ?loc) msg
 (** {2 Constructors} *)
 
 let ty_bool = Ty_bool
+
+let ty_bv n = Ty_bv n
 let ty_app s l = Ty_app (s,l)
 let ty_const s = ty_app s []
 let ty_real = Ty_real
@@ -164,6 +192,8 @@ let rec not_ t = match t with
   | _ -> Not t
 
 let arith op l = Arith (op,l)
+
+let bitvec op l = Bitvec (op, l)
 
 let _mk ?loc stmt = { loc; stmt }
 
@@ -233,6 +263,7 @@ let pp_tyvar = pp_str
 let rec pp_ty out (ty:ty) = match ty with
   | Ty_bool -> pp_str out "Bool"
   | Ty_real -> pp_str out "Real"
+  | Ty_bv n -> pp_str out ("BitVec " ^ (string_of_int n))
   | Ty_app (s,[]) -> pp_str out s
   | Ty_app (s,l) -> Format.fprintf out "(@[<hv1>%s@ %a@])" s (pp_list pp_ty) l
   | Ty_arrow (args,ret) ->
@@ -248,7 +279,27 @@ let str_of_arith = function
   | Mult -> "*"
   | Div -> "/"
 
+  let str_of_bitvec = function
+  | BVUlt -> "bvult"
+  | BVSlt -> "bvslt"
+  | BVNot -> "bvnot"
+  | BVAnd -> "bvand"
+  | BVXor -> "bvxor"
+  | BVShl -> "bvshl"
+  | BVLsht -> "bvlsht"
+  | BVAshr -> "bvashr"
+  | BVAdd -> "bvadd"
+  | BVMul -> "bvmul"
+  | BVURem -> "bvurem"
+  | BVUDiv -> "bvudiv"
+  | Concat -> "concat"
+  | Sign_extend i -> "(sign_extend " ^ (string_of_int i) ^ ")"
+  | Extract (i, j) -> "(extract " ^ (string_of_int i) ^ " " ^ (string_of_int j) ^ ")"
+
+
+
 let pp_arith out a = Format.pp_print_string out (str_of_arith a)
+let pp_bitvec out a = Format.pp_print_string out (str_of_bitvec a)
 
 let _lvl_top = 0
 
@@ -280,6 +331,8 @@ let rec pp_term lvl out (t:term) =
   | False -> pp_str out "false"
   | Arith (op,l) ->
     Format.fprintf out "(@[<hv>%a@ %a@])" pp_arith op (pp_list self_a) l
+  | Bitvec (op, l) -> 
+    Format.fprintf out "(@[<hv>%a@ %a@])" pp_bitvec op (pp_list self_a) l
   | Const s -> pp_str out s
   | App (f,l) -> fpf' lvl_app out "%s@ %a" f (pp_list self_a) l
   | HO_app (a,b) -> fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b
