@@ -22,6 +22,7 @@
 let printable_char = [^ '\n']
 let comment_line = ';' printable_char*
 
+
 let sym = [^ '"' '(' ')' '\\' ' ' '\t' '\r' '\n']
 let atom = sym+
 let invbars = '|' ([^ '\\' '|'] | '\\' '|')+ '|'
@@ -48,6 +49,8 @@ rule token = parse
   | "=" { EQ }
   | "@" { AT }
   | "!" { BANG }
+  | "sign_extend" {SIGN_EXTEND} (* sign_extend and extract come from BV but are treated different because they are parametric*)
+  | "extract" {EXTRACT}
   | "declare-datatypes" { DATA }
   | "declare-datatype" { DATUM }
   | "assert" { ASSERT }
@@ -62,6 +65,7 @@ rule token = parse
   | "check-sat-assuming" { CHECK_SAT_ASSUMING }
   | "check-sat" { CHECK_SAT }
   | "get-value" { GET_VALUE }
+  | "BitVec" { BITVEC}
   | atom { IDENT(Lexing.lexeme lexbuf) }
   | invbars {
       let s = Lexing.lexeme lexbuf in
