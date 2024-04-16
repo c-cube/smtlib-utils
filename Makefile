@@ -16,6 +16,9 @@ test: test-dune test-cat test-idempotent
 test-dune:
 	@dune runtest --force --no-buffer
 
+format:
+	@dune fmt --auto-promote
+
 doc:
 	@dune build @doc
 
