@@ -19,6 +19,9 @@ test-dune:
 format:
 	@dune fmt --auto-promote
 
+format-check:
+	@dune build $(DUNE_OPTS) @fmt --display=quiet
+
 doc:
 	@dune build @doc
 
