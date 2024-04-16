@@ -27,29 +27,27 @@ type arith_op =
   | Mult
   | Div
 
-  (* We consider a limited set of bitvector operations from the Bitwuzla SMT solver 
-    (https://bitwuzla.github.io/data/fmcad2020/NiemetzPreiner-FMCAD20.pdf). These 
-    operations are complete in the sense that all other bitvector operations can 
-    be written in terms of them*)
+(* We consider a limited set of bitvector operations from the Bitwuzla SMT solver
+   (https://bitwuzla.github.io/data/fmcad2020/NiemetzPreiner-FMCAD20.pdf). These
+   operations are complete in the sense that all other bitvector operations can
+   be written in terms of them*)
 
-type bitvec_op = 
-  | BVUlt 
-  | BVSlt 
-  | BVNot 
+type bitvec_op =
+  | BVUlt
+  | BVSlt
+  | BVNot
   | BVAnd
-  | BVXor 
-  | BVShl 
-  | BVLsht 
-  | BVAshr 
-  | BVAdd 
-  | BVMul 
-  | BVURem 
+  | BVXor
+  | BVShl
+  | BVLsht
+  | BVAshr
+  | BVAdd
+  | BVMul
+  | BVURem
   | BVUDiv
-  | Concat 
+  | Concat
   | Sign_extend of int
   | Extract of int * int
-
-
 
 (** {2 AST: S-expressions with locations} *)
 type term =
@@ -142,14 +140,14 @@ and stmt =
 
 exception Parse_error of Loc.t option * string
 
-let () = Printexc.register_printer
-    (function
-      | Parse_error (loc, msg) ->
-        let pp out () =
-          Format.fprintf out "parse error at %a:@ %s" Loc.pp_opt loc msg
-        in
-        Some (pp_to_string pp ())
-      | _ -> None)
+let () =
+  Printexc.register_printer (function
+    | Parse_error (loc, msg) ->
+      let pp out () =
+        Format.fprintf out "parse error at %a:@ %s" Loc.pp_opt loc msg
+      in
+      Some (pp_to_string pp ())
+    | _ -> None)
 
 let parse_error ?loc msg = raise (Parse_error (loc, msg))
 let parse_errorf ?loc msg = Format.ksprintf (parse_error ?loc) msg
@@ -157,74 +155,100 @@ let parse_errorf ?loc msg = Format.ksprintf (parse_error ?loc) msg
 (** {2 Constructors} *)
 
 let ty_bool = Ty_bool
-
 let ty_bv n = Ty_bv n
-let ty_app s l = Ty_app (s,l)
+let ty_app s l = Ty_app (s, l)
 let ty_const s = ty_app s []
 let ty_real = Ty_real
-let ty_arrow_l args ret = if args=[] then ret else Ty_arrow (args, ret)
-let ty_arrow a b = ty_arrow_l [a] b
 
+let ty_arrow_l args ret =
+  if args = [] then
+    ret
+  else
+    Ty_arrow (args, ret)
+
+let ty_arrow a b = ty_arrow_l [ a ] b
 let true_ = True
 let false_ = False
 let const s = Const s
-let app f l = App (f,l)
-let ho_app a b = HO_app (a,b)
+let app f l = App (f, l)
+let ho_app a b = HO_app (a, b)
 let ho_app_l a l = List.fold_left ho_app a l
-let match_ u l = Match (u,l)
-let if_ a b c = If(a,b,c)
-let fun_ v t = Fun (v,t)
+let match_ u l = Match (u, l)
+let if_ a b c = If (a, b, c)
+let fun_ v t = Fun (v, t)
 let fun_l = List.fold_right fun_
-let let_ l t = Let (l,t)
-let eq a b = Eq (a,b)
-let imply a b = Imply(a,b)
-let is_a c t = Is_a (c,t)
+let let_ l t = Let (l, t)
+let eq a b = Eq (a, b)
+let imply a b = Imply (a, b)
+let is_a c t = Is_a (c, t)
 let and_ l = And l
 let or_ l = Or l
 let distinct l = Distinct l
 let cast t ~ty = Cast (t, ty)
-let forall vars f = match vars with [] -> f | _ -> Forall (vars, f)
-let exists vars f = match vars with [] -> f | _ -> Exists (vars, f)
-let attr t l = match l with [] -> t | _ -> Attr (t, l)
-let rec not_ t = match t with
-  | Forall (vars,u) -> exists vars (not_ u)
-  | Exists (vars,u) -> forall vars (not_ u)
+
+let forall vars f =
+  match vars with
+  | [] -> f
+  | _ -> Forall (vars, f)
+
+let exists vars f =
+  match vars with
+  | [] -> f
+  | _ -> Exists (vars, f)
+
+let attr t l =
+  match l with
+  | [] -> t
+  | _ -> Attr (t, l)
+
+let rec not_ t =
+  match t with
+  | Forall (vars, u) -> exists vars (not_ u)
+  | Exists (vars, u) -> forall vars (not_ u)
   | _ -> Not t
 
-let arith op l = Arith (op,l)
-
+let arith op l = Arith (op, l)
 let bitvec op l = Bitvec (op, l)
-
 let _mk ?loc stmt = { loc; stmt }
 
-let mk_cstor ~vars name l : cstor = { cstor_ty_vars=vars; cstor_name=name; cstor_args=l }
+let mk_cstor ~vars name l : cstor =
+  { cstor_ty_vars = vars; cstor_name = name; cstor_args = l }
+
 let mk_fun_decl ~ty_vars f args ret =
-  { fun_ty_vars=ty_vars; fun_name=f;
-    fun_args=args; fun_ret=ret; }
+  { fun_ty_vars = ty_vars; fun_name = f; fun_args = args; fun_ret = ret }
+
 let mk_fun_rec ~ty_vars f args ret body =
-  { fr_decl=mk_fun_decl ~ty_vars f args ret; fr_body=body; }
+  { fr_decl = mk_fun_decl ~ty_vars f args ret; fr_body = body }
 
 let decl_sort ?loc s ~arity = _mk ?loc (Stmt_decl_sort (s, arity))
+
 let decl_fun ?loc ~tyvars f ty_args ty_ret =
-  let d = {fun_ty_vars=tyvars; fun_name=f; fun_args=ty_args; fun_ret=ty_ret} in
+  let d =
+    { fun_ty_vars = tyvars; fun_name = f; fun_args = ty_args; fun_ret = ty_ret }
+  in
   _mk ?loc (Stmt_decl d)
+
 let fun_def ?loc fr = _mk ?loc (Stmt_fun_def fr)
 let fun_rec ?loc fr = _mk ?loc (Stmt_fun_rec fr)
-let funs_rec ?loc decls bodies = _mk ?loc (Stmt_funs_rec {fsr_decls=decls; fsr_bodies=bodies})
+
+let funs_rec ?loc decls bodies =
+  _mk ?loc (Stmt_funs_rec { fsr_decls = decls; fsr_bodies = bodies })
+
 let data ?loc l = _mk ?loc (Stmt_data l)
+
 let data_zip ?loc decls cstors =
-  if List.length decls <> List.length cstors then (
+  if List.length decls <> List.length cstors then
     parse_errorf ?loc
       "declare-datatypes: mismatched lengths (%d types, %d lists of cstors)"
-      (List.length decls) (List.length cstors)
-  );
+      (List.length decls) (List.length cstors);
   _mk ?loc (Stmt_data (List.combine decls cstors))
+
 let assert_ ?loc t = _mk ?loc (Stmt_assert t)
 let check_sat ?loc () = _mk ?loc Stmt_check_sat
 let check_sat_assuming ?loc l = _mk ?loc @@ Stmt_check_sat_assuming l
 let exit ?loc () = _mk ?loc Stmt_exit
 let set_logic ?loc l = _mk ?loc @@ Stmt_set_logic l
-let set_info ?loc a b = _mk ?loc @@ Stmt_set_info (a,b)
+let set_info ?loc a b = _mk ?loc @@ Stmt_set_info (a, b)
 let get_info ?loc s = _mk ?loc @@ Stmt_get_info s
 let set_option ?loc l = _mk ?loc @@ Stmt_set_option l
 let get_option ?loc s = _mk ?loc @@ Stmt_get_option s
@@ -239,34 +263,33 @@ let get_unsat_core ?loc () = _mk ?loc @@ Stmt_get_unsat_core
 let get_unsat_assumptions ?loc () = _mk ?loc @@ Stmt_get_unsat_assumptions
 let reset ?loc () = _mk ?loc Stmt_reset
 let reset_assertions ?loc () = _mk ?loc Stmt_reset_assertions
-
 let loc t = t.loc
 let view t = t.stmt
-
 let fpf = Format.fprintf
 
 let pp_list pp out l =
-  let rec aux l = match l with
-  | x::((_::_) as l) ->
-    pp out x;
-    Format.fprintf out "@ ";
-    aux l
-  | x::[] -> pp out x
-  | [] -> ()
+  let rec aux l =
+    match l with
+    | x :: (_ :: _ as l) ->
+      pp out x;
+      Format.fprintf out "@ ";
+      aux l
+    | x :: [] -> pp out x
+    | [] -> ()
   in
   aux l
 
 let pp_str out s = Format.pp_print_string out s
-
 let pp_tyvar = pp_str
 
-let rec pp_ty out (ty:ty) = match ty with
+let rec pp_ty out (ty : ty) =
+  match ty with
   | Ty_bool -> pp_str out "Bool"
   | Ty_real -> pp_str out "Real"
-  | Ty_bv n -> pp_str out ("BitVec " ^ (string_of_int n))
-  | Ty_app (s,[]) -> pp_str out s
-  | Ty_app (s,l) -> Format.fprintf out "(@[<hv1>%s@ %a@])" s (pp_list pp_ty) l
-  | Ty_arrow (args,ret) ->
+  | Ty_bv n -> pp_str out ("BitVec " ^ string_of_int n)
+  | Ty_app (s, []) -> pp_str out s
+  | Ty_app (s, l) -> Format.fprintf out "(@[<hv1>%s@ %a@])" s (pp_list pp_ty) l
+  | Ty_arrow (args, ret) ->
     fpf out "(@[=>@ %a@ %a@])" (pp_list pp_ty) args pp_ty ret
 
 let str_of_arith = function
@@ -279,7 +302,7 @@ let str_of_arith = function
   | Mult -> "*"
   | Div -> "/"
 
-  let str_of_bitvec = function
+let str_of_bitvec = function
   | BVUlt -> "bvult"
   | BVSlt -> "bvslt"
   | BVNot -> "bvnot"
@@ -293,17 +316,15 @@ let str_of_arith = function
   | BVURem -> "bvurem"
   | BVUDiv -> "bvudiv"
   | Concat -> "concat"
-  | Sign_extend i -> "(sign_extend " ^ (string_of_int i) ^ ")"
-  | Extract (i, j) -> "(extract " ^ (string_of_int i) ^ " " ^ (string_of_int j) ^ ")"
-
-
+  | Sign_extend i -> "(sign_extend " ^ string_of_int i ^ ")"
+  | Extract (i, j) ->
+    "(extract " ^ string_of_int i ^ " " ^ string_of_int j ^ ")"
 
 let pp_arith out a = Format.pp_print_string out (str_of_arith a)
 let pp_bitvec out a = Format.pp_print_string out (str_of_bitvec a)
-
 let _lvl_top = 0
 
-let rec pp_term lvl out (t:term) =
+let rec pp_term lvl out (t : term) =
   let lvl_q = 10 in
   let lvl_let = 20 in
   let lvl_match = 25 in
@@ -315,115 +336,127 @@ let rec pp_term lvl out (t:term) =
   let self = pp_term lvl in
   let self' lvl' = pp_term lvl' in
   let self_a = self' lvl_app in
-  let pp_binding out (v,t) = fpf out "(@[%s@ %a@])" v (self' lvl_let) t in
+  let pp_binding out (v, t) = fpf out "(@[%s@ %a@])" v (self' lvl_let) t in
   let fpf' lvl' out fmt =
-    if lvl <> lvl' then (
+    if lvl <> lvl' then
       fpf out "(@["
-    ) else (
-      fpf out "("
-    );
+    else
+      fpf out "(";
     Format.kfprintf
-      (fun out -> if lvl <> lvl' then fpf out "@])" else fpf out ")")
+      (fun out ->
+        if lvl <> lvl' then
+          fpf out "@])"
+        else
+          fpf out ")")
       out fmt
   in
   match t with
   | True -> pp_str out "true"
   | False -> pp_str out "false"
-  | Arith (op,l) ->
+  | Arith (op, l) ->
     Format.fprintf out "(@[<hv>%a@ %a@])" pp_arith op (pp_list self_a) l
-  | Bitvec (op, l) -> 
+  | Bitvec (op, l) ->
     Format.fprintf out "(@[<hv>%a@ %a@])" pp_bitvec op (pp_list self_a) l
   | Const s -> pp_str out s
-  | App (f,l) -> fpf' lvl_app out "%s@ %a" f (pp_list self_a) l
-  | HO_app (a,b) -> fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b
-  | Match (lhs,cases) ->
+  | App (f, l) -> fpf' lvl_app out "%s@ %a" f (pp_list self_a) l
+  | HO_app (a, b) ->
+    fpf' lvl_app out "@@@ %a@ %a" (self' lvl_app) a (self' lvl_app) b
+  | Match (lhs, cases) ->
     let pp_case out = function
       | Match_default rhs -> fpf out "(@[<1>_@ %a@])" (self' lvl_match) rhs
-      | Match_case (c,[],rhs) ->
+      | Match_case (c, [], rhs) ->
         fpf out "(@[<1>%s@ %a@])" c (self' _lvl_top) rhs
-      | Match_case (c,vars,rhs) ->
-        fpf out "(@[<1>(@[%s@ %a@])@ %a@])"
-          c (pp_list pp_str) vars (self' _lvl_top) rhs
+      | Match_case (c, vars, rhs) ->
+        fpf out "(@[<1>(@[%s@ %a@])@ %a@])" c (pp_list pp_str) vars
+          (self' _lvl_top) rhs
     in
     fpf' lvl_match out "match@ %a@ (@[<v>%a@])" (self' _lvl_top) lhs
       (pp_list pp_case) cases
-  | If (a,b,c) ->
-    fpf' lvl_app out "ite %a@ %a@ %a" self_a a self_a b self_a c
-  | Fun (v,body) ->
+  | If (a, b, c) -> fpf' lvl_app out "ite %a@ %a@ %a" self_a a self_a b self_a c
+  | Fun (v, body) ->
     fpf' lvl_q out "lambda @ (%a)@ %a" pp_typed_var v (self' lvl_q) body
-  | Let (l,t) ->
-    fpf' lvl_let out "let@ (@[%a@])@ %a" (pp_list pp_binding) l (self' lvl_let) t
-  | Is_a (c,t) -> fpf out "(@[(@[_ is@ %s@])@ %a@])" c self t
-  | Eq (a,b) -> fpf out "(@[=@ %a@ %a@])" self a self b
-  | Imply (a,b) ->
+  | Let (l, t) ->
+    fpf' lvl_let out "let@ (@[%a@])@ %a" (pp_list pp_binding) l (self' lvl_let)
+      t
+  | Is_a (c, t) -> fpf out "(@[(@[_ is@ %s@])@ %a@])" c self t
+  | Eq (a, b) -> fpf out "(@[=@ %a@ %a@])" self a self b
+  | Imply (a, b) ->
     fpf' lvl_or out "=>@ %a@ %a" (self' lvl_or) a (self' lvl_or) b
   | And l -> fpf' lvl_and out "and@ %a" (pp_list @@ self' lvl_and) l
   | Or l -> fpf' lvl_or out "or@ %a" (pp_list @@ self' lvl_or) l
   | Not t -> fpf' lvl_not out "not@ %a" (self' lvl_not) t
   | Distinct l -> fpf out "(@[distinct@ %a@])" (pp_list self) l
   | Cast (t, ty) -> fpf out "(@[<hv>as@ @[%a@]@ @[%a@]@])" self t pp_ty ty
-  | Forall (vars,f) ->
-    fpf' lvl_q out "forall@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
-  | Exists (vars,f) ->
-    fpf' lvl_q out "exists@ (@[%a@])@ %a" (pp_list pp_typed_var) vars (self' lvl_q) f
+  | Forall (vars, f) ->
+    fpf' lvl_q out "forall@ (@[%a@])@ %a" (pp_list pp_typed_var) vars
+      (self' lvl_q) f
+  | Exists (vars, f) ->
+    fpf' lvl_q out "exists@ (@[%a@])@ %a" (pp_list pp_typed_var) vars
+      (self' lvl_q) f
   | Attr (t, l) ->
-    let pp_attr out (x,y) = Format.fprintf out "%s %s" x y in
+    let pp_attr out (x, y) = Format.fprintf out "%s %s" x y in
     fpf' lvl_app out "! @[%a@] %a" (self' lvl_app) t (pp_list pp_attr) l
-and pp_typed_var out (v,ty) =
-  fpf out "(@[%s@ %a@])" v pp_ty ty
+
+and pp_typed_var out (v, ty) = fpf out "(@[%s@ %a@])" v pp_ty ty
 
 let pp_term out t = pp_term _lvl_top out t
 
-let pp_par pp_x out (ty_vars,x) = match ty_vars with
+let pp_par pp_x out (ty_vars, x) =
+  match ty_vars with
   | [] -> pp_x out x
-  | _ ->
-    fpf out "(@[par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
+  | _ -> fpf out "(@[par (@[%a@])@ (%a)@])" (pp_list pp_tyvar) ty_vars pp_x x
 
 let pp_fun_decl pp_arg out fd =
-  fpf out "%s@ (@[%a@])@ %a"
-    fd.fun_name (pp_list pp_arg) fd.fun_args pp_ty fd.fun_ret
+  fpf out "%s@ (@[%a@])@ %a" fd.fun_name (pp_list pp_arg) fd.fun_args pp_ty
+    fd.fun_ret
 
 let pp_fr out fr =
-  fpf out "@[<2>%a@ %a@]" (pp_fun_decl pp_typed_var) fr.fr_decl pp_term fr.fr_body
+  fpf out "@[<2>%a@ %a@]" (pp_fun_decl pp_typed_var) fr.fr_decl pp_term
+    fr.fr_body
 
-let pp_prop_lit out (s,b) =
-  if b then fpf out "%s" s else fpf out "(not %s)" s
+let pp_prop_lit out (s, b) =
+  if b then
+    fpf out "%s" s
+  else
+    fpf out "(not %s)" s
 
-let pp_stmt out (st:statement) = match view st with
-  | Stmt_set_info (a,b) -> fpf out "(@[set-info@ %a@ %a@])" pp_str a pp_str b
+let pp_stmt out (st : statement) =
+  match view st with
+  | Stmt_set_info (a, b) -> fpf out "(@[set-info@ %a@ %a@])" pp_str a pp_str b
   | Stmt_set_logic s -> fpf out "(@[set-logic@ %a@])" pp_str s
   | Stmt_set_option l -> fpf out "(@[set-option@ %a@])" (pp_list pp_str) l
-  | Stmt_decl_sort (s,n) -> fpf out "(@[declare-sort@ %s %d@])" s n
+  | Stmt_decl_sort (s, n) -> fpf out "(@[declare-sort@ %s %d@])" s n
   | Stmt_assert t -> fpf out "(@[assert@ %a@])" pp_term t
   | Stmt_decl d ->
     fpf out "(@[declare-fun@ %a@])"
-      (pp_par (pp_fun_decl pp_ty)) (d.fun_ty_vars,d)
+      (pp_par (pp_fun_decl pp_ty))
+      (d.fun_ty_vars, d)
   | Stmt_fun_def fr ->
-    fpf out "(@[<2>define-fun@ %a@])"
-      (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
+    fpf out "(@[<2>define-fun@ %a@])" (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
   | Stmt_fun_rec fr ->
-    fpf out "(@[<2>define-fun-rec@ %a@])"
-      (pp_par pp_fr) (fr.fr_decl.fun_ty_vars, fr)
+    fpf out "(@[<2>define-fun-rec@ %a@])" (pp_par pp_fr)
+      (fr.fr_decl.fun_ty_vars, fr)
   | Stmt_funs_rec fsr ->
     let pp_decl' out d = fpf out "(@[<2>%a@])" (pp_fun_decl pp_typed_var) d in
     fpf out "(@[<hv2>define-funs-rec@ (@[<v>%a@])@ (@[<v>%a@])@])"
       (pp_list pp_decl') fsr.fsr_decls (pp_list pp_term) fsr.fsr_bodies
   | Stmt_data l ->
-    let pp_decl out (name,n) = fpf out "(@[%s %d@])" name n in
-    let pp_cstor_arg out (sel,ty) = fpf out "(@[%s %a@])" sel pp_ty ty in
+    let pp_decl out (name, n) = fpf out "(@[%s %d@])" name n in
+    let pp_cstor_arg out (sel, ty) = fpf out "(@[%s %a@])" sel pp_ty ty in
     let pp_cstor_raw out c =
-      if c.cstor_args = []
-      then fpf out "(%s)" c.cstor_name
-      else fpf out "(@[<1>%s@ %a@])" c.cstor_name (pp_list pp_cstor_arg) c.cstor_args
+      if c.cstor_args = [] then
+        fpf out "(%s)" c.cstor_name
+      else
+        fpf out "(@[<1>%s@ %a@])" c.cstor_name (pp_list pp_cstor_arg)
+          c.cstor_args
     in
-    let pp_cstor out c =
-      pp_par pp_cstor_raw out (c.cstor_ty_vars, c)
+    let pp_cstor out c = pp_par pp_cstor_raw out (c.cstor_ty_vars, c) in
+    let pp_cstors_l out cstors =
+      fpf out "(@[<hv1>%a@])" (pp_list pp_cstor) cstors
     in
-    let pp_cstors_l out cstors = fpf out "(@[<hv1>%a@])" (pp_list pp_cstor) cstors in
     let decls, cstors_l = List.split l in
     fpf out "(@[<hv2>declare-datatypes@ (@[%a@])@ (@[<v>%a@])@])"
-      (pp_list pp_decl) decls
-      (pp_list pp_cstors_l) cstors_l
+      (pp_list pp_decl) decls (pp_list pp_cstors_l) cstors_l
   | Stmt_check_sat -> fpf out "(check-sat)"
   | Stmt_check_sat_assuming l ->
     fpf out "(@[<hv>check-sat-assuming@ %a@])" (pp_list pp_prop_lit) l

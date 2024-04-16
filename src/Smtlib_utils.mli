@@ -21,17 +21,12 @@ module V_2_6 : sig
   val parse_list_exn : Lexing.lexbuf -> Ast.statement list
   (** @since 0.3 *)
 
-  val parse_chan_exn :
-    ?filename:string ->
-    in_channel ->
-    Ast.statement list
+  val parse_chan_exn : ?filename:string -> in_channel -> Ast.statement list
   (** Parse the given channel.
       @raise Ast.Parse_error in case of error *)
 
   val parse_chan :
-    ?filename:string ->
-    in_channel ->
-    (Ast.statement list, string) result
+    ?filename:string -> in_channel -> (Ast.statement list, string) result
 
   val parse_string_exn : string -> Ast.statement list
   (** Parse content of the string

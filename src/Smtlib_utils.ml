@@ -19,17 +19,15 @@ module V_2_6 = struct
       raise e
 
   let parse_list_exn lexbuf =
-    try
-      Parser.parse_list Lexer.token lexbuf
-    with
-    | Parsing.Parse_error ->
+    try Parser.parse_list Lexer.token lexbuf
+    with Parsing.Parse_error ->
       raise (Ast.Parse_error (Some (Loc.of_lexbuf lexbuf), "syntax error"))
 
   let parse_list lexbuf =
     try Ok (parse_list_exn lexbuf)
     with e -> Result.Error (Printexc.to_string e)
 
-  let parse_chan_exn ?(filename="<no name>") ic =
+  let parse_chan_exn ?(filename = "<no name>") ic =
     let lexbuf = Lexing.from_channel ic in
     Loc.set_file lexbuf filename;
     parse_list_exn lexbuf

@@ -1,5 +1,5 @@
-
 let ok = ref true
+
 let test file =
   Printf.eprintf "test file '%s'\n%!" file;
   let code = Sys.command ("../src/bin/smtlib_cat.exe -q " ^ file) in
